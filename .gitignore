@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build and test outputs
+dist/
+coverage/
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env*.example
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Runtime/temp files
+tmp/
+.tmp/
+
+# OS/editor artifacts
+.DS_Store
+.vscode/
