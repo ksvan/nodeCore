@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  RETIRED
+}
+
+enum ProductVersionStatus {
+  DRAFT
+  ACTIVE
+  RETIRED
+}
+
+enum ComponentType {
+  COVERAGE
+  EXPOSURE
+  RULE
+}
+
+enum ComponentVersionStatus {
+  DRAFT
+  ACTIVE
+  RETIRED
+}
+
+enum PricingProgramVersionStatus {
+  DRAFT
+  ACTIVE
+  RETIRED
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String
+  roles        String[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Product {
+  id          String          @id @default(uuid()) @db.Uuid
+  productCode String          @unique
+  name        String
+  description String?
+  status      ProductStatus   @default(DRAFT)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  versions    ProductVersion[]
+}
+
+model ProductVersion {
+  id                      String                     @id @default(uuid()) @db.Uuid
+  productId               String                     @db.Uuid
+  version                 Int
+  status                  ProductVersionStatus       @default(DRAFT)
+  effectiveFrom           DateTime
+  effectiveTo             DateTime?
+  policySchema            Json
+  exposureSchemas         Json
+  pricingInputSchema      Json
+  pricingProgramVersionId String?                    @db.Uuid
+  activatedAt             DateTime?
+  createdAt               DateTime                   @default(now())
+  updatedAt               DateTime                   @updatedAt
+  product                 Product                    @relation(fields: [productId], references: [id], onDelete: Restrict)
+  pricingProgramVersion   PricingProgramVersion?     @relation(fields: [pricingProgramVersionId], references: [id], onDelete: Restrict)
+  snapshot                ProductVersionSnapshot?
+  componentRefs           ProductVersionComponentRef[]
+
+  @@unique([productId, version])
+}
+
+model ProductVersionSnapshot {
+  id               String         @id @default(uuid()) @db.Uuid
+  productVersionId String         @unique @db.Uuid
+  resolvedSnapshot Json
+  createdAt        DateTime       @default(now())
+  productVersion   ProductVersion @relation(fields: [productVersionId], references: [id], onDelete: Restrict)
+}
+
+model Component {
+  id            String             @id @default(uuid()) @db.Uuid
+  componentCode String             @unique
+  type          ComponentType
+  name          String
+  description   String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  versions      ComponentVersion[]
+}
+
+model ComponentVersion {
+  id           String                     @id @default(uuid()) @db.Uuid
+  componentId  String                     @db.Uuid
+  version      Int
+  status       ComponentVersionStatus     @default(DRAFT)
+  schema       Json
+  metadata     Json
+  releasedAt   DateTime?
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+  component    Component                  @relation(fields: [componentId], references: [id], onDelete: Restrict)
+  productRefs  ProductVersionComponentRef[]
+
+  @@unique([componentId, version])
+}
+
+model ProductVersionComponentRef {
+  id                 String           @id @default(uuid()) @db.Uuid
+  productVersionId   String           @db.Uuid
+  componentVersionId String           @db.Uuid
+  configOverrides    Json
+  createdAt          DateTime         @default(now())
+  productVersion     ProductVersion   @relation(fields: [productVersionId], references: [id], onDelete: Restrict)
+  componentVersion   ComponentVersion @relation(fields: [componentVersionId], references: [id], onDelete: Restrict)
+
+  @@unique([productVersionId, componentVersionId])
+}
+
+model PricingProgram {
+  id          String                  @id @default(uuid()) @db.Uuid
+  programCode String                  @unique
+  name        String
+  description String?
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  versions    PricingProgramVersion[]
+}
+
+model PricingProgramVersion {
+  id              String                      @id @default(uuid()) @db.Uuid
+  pricingProgramId String                     @db.Uuid
+  version         Int
+  status          PricingProgramVersionStatus @default(DRAFT)
+  fileRef         String
+  inputSchema     Json
+  outputSchema    Json
+  metadata        Json
+  releasedAt      DateTime?
+  createdAt       DateTime                    @default(now())
+  updatedAt       DateTime                    @updatedAt
+  pricingProgram  PricingProgram              @relation(fields: [pricingProgramId], references: [id], onDelete: Restrict)
+  productVersions ProductVersion[]
+
+  @@unique([pricingProgramId, version])
+}
