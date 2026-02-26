@@ -28,6 +28,8 @@ export interface ProductVersionDto {
   policySchema: Record<string, unknown>;
   exposureSchemas: Record<string, unknown>;
   pricingInputSchema: Record<string, unknown>;
+  defaultCurrency: string;
+  allowedCurrencies: ReadonlyArray<string>;
   pricingProgramVersionId: string | null;
   activatedAt: string | null;
   createdAt: string;
@@ -108,6 +110,8 @@ export const toProductVersionDto = (record: ProductVersionRecord): ProductVersio
   policySchema: structuredClone(record.policySchema),
   exposureSchemas: structuredClone(record.exposureSchemas),
   pricingInputSchema: structuredClone(record.pricingInputSchema),
+  defaultCurrency: record.defaultCurrency,
+  allowedCurrencies: [...record.allowedCurrencies],
   pricingProgramVersionId: record.pricingProgramVersionId,
   activatedAt: record.activatedAt ? record.activatedAt.toISOString() : null,
   createdAt: record.createdAt.toISOString(),

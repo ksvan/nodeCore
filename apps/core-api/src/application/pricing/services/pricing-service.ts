@@ -1,5 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { PricingRequestSchema, PricingResponseSchema, type PricingResponse } from "@nodecore/contracts/pricing";
+import {
+  CurrencyCodeSchema,
+  PricingRequestSchema,
+  PricingResponseSchema,
+  type PricingResponse,
+} from "@nodecore/contracts/pricing";
 import type {
   CalculatePricingInput,
   JsonObject,
@@ -15,6 +20,7 @@ interface PricingCalculationResult {
   requestId: string;
   productVersionId: string;
   pricingProgramVersionId: string;
+  currency: "SEK" | "DKK" | "EUR" | "GBP" | "USD" | "NOK";
   success: boolean;
   durationMs: number;
   response: PricingResponse;
@@ -52,8 +58,17 @@ export class PricingService {
     }
 
     const requestId = input.requestId ?? randomUUID();
+    const requestedCurrency = CurrencyCodeSchema.parse(input.currency ?? context.defaultCurrency);
+    if (!context.allowedCurrencies.includes(requestedCurrency)) {
+      throw new PricingApplicationError(
+        `Currency ${requestedCurrency} is not allowed for this product version`,
+        400,
+      );
+    }
+
     const pricingInputPayload = {
       resolvedSnapshot: context.resolvedSnapshot,
+      currency: requestedCurrency,
       ratingInput: input.ratingInput,
     };
 
@@ -71,6 +86,7 @@ export class PricingService {
       requestId,
       productVersionId: context.productVersionId,
       pricingProgramVersionId: context.pricingProgramVersionId,
+      currency: requestedCurrency,
       input: pricingInputPayload,
       ratingInput: input.ratingInput,
       occurredAt: nowIso(),
@@ -101,6 +117,12 @@ export class PricingService {
       }
 
       const parsedResponse = PricingResponseSchema.parse(execution.responseJson);
+      if (parsedResponse.currency !== requestedCurrency) {
+        throw new PricingDomainError(
+          `Pricing response currency mismatch: expected ${requestedCurrency}, got ${parsedResponse.currency}`,
+        );
+      }
+
       success = true;
       responseForPersistence = toJsonObject(parsedResponse);
 
@@ -111,6 +133,7 @@ export class PricingService {
         requestJson: toJsonObject(pricingRequest),
         responseJson: responseForPersistence,
         durationMs,
+        currency: requestedCurrency,
         success,
         failureReason: null,
       });
@@ -123,6 +146,7 @@ export class PricingService {
           requestId,
           productVersionId: context.productVersionId,
           pricingProgramVersionId: context.pricingProgramVersionId,
+          currency: requestedCurrency,
           success: true,
           durationMs,
           totalPremium: parsedResponse.totalPremium,
@@ -134,6 +158,7 @@ export class PricingService {
         requestId,
         productVersionId: context.productVersionId,
         pricingProgramVersionId: context.pricingProgramVersionId,
+        currency: requestedCurrency,
         success: true,
         durationMs,
         response: parsedResponse,
@@ -151,6 +176,7 @@ export class PricingService {
         requestJson: toJsonObject(pricingRequest),
         responseJson: responseForPersistence,
         durationMs,
+        currency: requestedCurrency,
         success,
         failureReason,
       });
@@ -163,6 +189,7 @@ export class PricingService {
           requestId,
           productVersionId: context.productVersionId,
           pricingProgramVersionId: context.pricingProgramVersionId,
+          currency: requestedCurrency,
           success: false,
           durationMs,
           occurredAt: nowIso(),

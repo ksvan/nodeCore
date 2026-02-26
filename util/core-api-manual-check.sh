@@ -83,6 +83,51 @@ effective_from="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 product_code="MANUAL-PROD-${unique_suffix}"
 component_code="MANUAL-COMP-${unique_suffix}"
 program_code="MANUAL-PROGRAM-${unique_suffix}"
+pricing_program_file="/tmp/core-api-manual-pricing-${unique_suffix}.py"
+
+cat > "$pricing_program_file" <<'PY'
+#!/usr/bin/env python3
+import json
+import sys
+
+request = json.loads(sys.stdin.read() or "{}")
+rating_input = request.get("ratingInput", {})
+policy = rating_input.get("policy", {}) if isinstance(rating_input, dict) else {}
+requested_currency = request.get("currency", "SEK")
+base_rate = policy.get("baseRate", 100)
+driver_age = policy.get("driverAge", 35)
+
+try:
+  base_rate_num = float(base_rate)
+except Exception:
+  base_rate_num = 100.0
+
+try:
+  driver_age_num = int(driver_age)
+except Exception:
+  driver_age_num = 35
+
+age_factor = 1.2 if driver_age_num < 25 else 1.0
+total = round(base_rate_num * age_factor, 2)
+
+response = {
+  "requestId": request.get("requestId"),
+  "success": True,
+  "totalPremium": total,
+  "currency": requested_currency,
+  "breakdown": {
+    "base": base_rate_num,
+    "ageFactor": age_factor
+  },
+  "details": {
+    "engine": "manual-training-script"
+  }
+}
+
+sys.stdout.write(json.dumps(response))
+PY
+chmod +x "$pricing_program_file"
+trap 'rm -f "$pricing_program_file"' EXIT
 
 printf "Core API manual check script\n"
 printf "Base URL: %s\n" "$BASE_URL"
@@ -160,18 +205,12 @@ require_nonempty "$pricing_program_id" "pricing_program_id"
 
 call_api "POST" "/v1/product-management/pricing-programs/${pricing_program_id}/versions" "$(cat <<JSON
 {
-  "fileRef": "pricing/manual-${unique_suffix}.ts",
+  "fileRef": "${pricing_program_file}",
   "inputSchema": {
-    "type": "object",
-    "properties": {
-      "state": { "type": "string" }
-    }
+    "type": "object"
   },
   "outputSchema": {
-    "type": "object",
-    "properties": {
-      "premium": { "type": "number" }
-    }
+    "type": "object"
   },
   "metadata": {
     "source": "manual-check-script"
@@ -200,11 +239,10 @@ call_api "POST" "/v1/product-management/products/${product_id}/versions" "$(cat 
     }
   },
   "pricingInputSchema": {
-    "type": "object",
-    "properties": {
-      "baseRate": { "type": "number" }
-    }
+    "type": "object"
   },
+  "defaultCurrency": "SEK",
+  "allowedCurrencies": ["SEK", "USD", "EUR"],
   "pricingProgramVersionId": "${pricing_program_version_id}"
 }
 JSON
@@ -236,6 +274,47 @@ JSON
 )"
 
 call_api "POST" "/v1/product-management/product-versions/${product_version_id}/activate"
+snapshot_id="$(extract_field "$LAST_BODY" '.snapshot.id')"
+require_nonempty "$snapshot_id" "snapshot_id"
+
+call_api "POST" "/v1/pricing/calculate" "$(cat <<JSON
+{
+  "productVersionId": "${product_version_id}",
+  "currency": "USD",
+  "ratingInput": {
+    "policy": {
+      "baseRate": 120,
+      "driverAge": 22
+    },
+    "exposures": [],
+    "coverages": [],
+    "context": {
+      "source": "manual-check-script"
+    }
+  }
+}
+JSON
+)"
+
+call_api "POST" "/v1/pricing/calculate" "$(cat <<JSON
+{
+  "resolvedSnapshotId": "${snapshot_id}",
+  "currency": "EUR",
+  "ratingInput": {
+    "policy": {
+      "baseRate": 85,
+      "driverAge": 41
+    },
+    "exposures": [],
+    "coverages": [],
+    "context": {
+      "source": "manual-check-script"
+    }
+  }
+}
+JSON
+)"
+
 call_api "POST" "/v1/product-management/product-versions/${product_version_id}/retire"
 
 call_api "DELETE" "/v1/product-management/products/${product_id}"

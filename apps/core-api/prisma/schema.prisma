@@ -37,6 +37,15 @@ enum PricingProgramVersionStatus {
   RETIRED
 }
 
+enum CurrencyCode {
+  SEK
+  DKK
+  EUR
+  GBP
+  USD
+  NOK
+}
+
 model User {
   id           String   @id @default(uuid()) @db.Uuid
   email        String   @unique
@@ -67,6 +76,8 @@ model ProductVersion {
   policySchema            Json
   exposureSchemas         Json
   pricingInputSchema      Json
+  defaultCurrency         CurrencyCode               @default(SEK)
+  allowedCurrencies       CurrencyCode[]             @default([SEK])
   pricingProgramVersionId String?                    @db.Uuid
   activatedAt             DateTime?
   createdAt               DateTime                   @default(now())
@@ -165,6 +176,7 @@ model PricingRun {
   responseJson            Json
   occurredAt              DateTime              @default(now())
   durationMs              Int
+  currency                CurrencyCode
   success                 Boolean
   failureReason           String?
   productVersion          ProductVersion        @relation(fields: [productVersionId], references: [id], onDelete: Restrict)

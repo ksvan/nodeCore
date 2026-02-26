@@ -107,6 +107,8 @@ export class ProductManagementService {
     policySchema: JsonObject;
     exposureSchemas: JsonObject;
     pricingInputSchema: JsonObject;
+    defaultCurrency?: "SEK" | "DKK" | "EUR" | "GBP" | "USD" | "NOK";
+    allowedCurrencies?: ReadonlyArray<"SEK" | "DKK" | "EUR" | "GBP" | "USD" | "NOK">;
     pricingProgramVersionId: string | null;
   }): Promise<ProductVersionDto> {
     const product = await this.repository.getProductById(input.productId);
@@ -125,6 +127,18 @@ export class ProductManagementService {
     }
 
     const version = await this.repository.getNextProductVersionNumber(input.productId);
+    const defaultCurrency = input.defaultCurrency ?? "SEK";
+    const allowedCurrencies = input.allowedCurrencies?.length
+      ? [...new Set(input.allowedCurrencies)]
+      : [defaultCurrency];
+
+    if (!allowedCurrencies.includes(defaultCurrency)) {
+      throw new ProductManagementApplicationError(
+        "defaultCurrency must be included in allowedCurrencies",
+        400,
+      );
+    }
+
     const created = await this.repository.createProductVersion({
       productId: input.productId,
       version,
@@ -133,6 +147,8 @@ export class ProductManagementService {
       policySchema: input.policySchema,
       exposureSchemas: input.exposureSchemas,
       pricingInputSchema: input.pricingInputSchema,
+      defaultCurrency,
+      allowedCurrencies,
       pricingProgramVersionId: input.pricingProgramVersionId,
     });
 

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { FastifyInstance, FastifyReply } from "fastify";
+import { CurrencyCodeSchema } from "@nodecore/contracts/pricing";
 import { ProductManagementApplicationError } from "../../../application/product-management/services/errors.js";
 import { ProductManagementService } from "../../../application/product-management/services/product-management-service.js";
 import { ProductManagementDomainError } from "../../../domain/product-management/errors.js";
@@ -114,6 +115,8 @@ export const registerProductManagementRoutes = async (app: FastifyInstance): Pro
         policySchema: JsonObjectSchema.optional(),
         exposureSchemas: JsonObjectSchema.optional(),
         pricingInputSchema: JsonObjectSchema.optional(),
+        defaultCurrency: CurrencyCodeSchema.optional(),
+        allowedCurrencies: z.array(CurrencyCodeSchema).optional(),
         pricingProgramVersionId: z.string().uuid().nullable().optional(),
       })
       .parse(request.body);
@@ -126,6 +129,8 @@ export const registerProductManagementRoutes = async (app: FastifyInstance): Pro
         policySchema: body.policySchema ?? {},
         exposureSchemas: body.exposureSchemas ?? {},
         pricingInputSchema: body.pricingInputSchema ?? {},
+        ...(body.defaultCurrency ? { defaultCurrency: body.defaultCurrency } : {}),
+        ...(body.allowedCurrencies ? { allowedCurrencies: body.allowedCurrencies } : {}),
         pricingProgramVersionId: body.pricingProgramVersionId ?? null,
       });
       return reply.code(201).send(productVersion);

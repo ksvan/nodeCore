@@ -167,6 +167,8 @@ The pricing program SHALL NOT define or modify the input schema; it MUST conform
 
 Schemas SHALL be versioned and stored as part of product configuration.
 
+Products and pricing should support multi currency, hence also invoicing, policy etc must support that. Use USD, GPB, SEK, DKK, NOK, EUR. SEK is default.
+
 #### Reusable Product Components (MVP)
 
 The key is to make reusable, versioned “building blocks” first-class, and then let ProductVersion compose them by reference.

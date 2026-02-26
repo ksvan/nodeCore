@@ -18,6 +18,7 @@ const toPricingRunRecord = (record: PricingRun): PricingRunRecord => ({
   responseJson: asJsonObject(record.responseJson),
   occurredAt: record.occurredAt,
   durationMs: record.durationMs,
+  currency: record.currency,
   success: record.success,
   failureReason: record.failureReason,
 });
@@ -49,6 +50,8 @@ export class PrismaPricingRepository implements PricingRepository {
       pricingProgramFileRef: productVersion.pricingProgramVersion.fileRef,
       pricingInputSchema: asJsonObject(productVersion.pricingInputSchema),
       pricingOutputSchema: asJsonObject(productVersion.pricingProgramVersion.outputSchema),
+      defaultCurrency: productVersion.defaultCurrency,
+      allowedCurrencies: [...productVersion.allowedCurrencies],
       resolvedSnapshot: asJsonObject(productVersion.snapshot.resolvedSnapshot),
     };
   }
@@ -79,6 +82,8 @@ export class PrismaPricingRepository implements PricingRepository {
       pricingProgramFileRef: snapshot.productVersion.pricingProgramVersion.fileRef,
       pricingInputSchema: asJsonObject(snapshot.productVersion.pricingInputSchema),
       pricingOutputSchema: asJsonObject(snapshot.productVersion.pricingProgramVersion.outputSchema),
+      defaultCurrency: snapshot.productVersion.defaultCurrency,
+      allowedCurrencies: [...snapshot.productVersion.allowedCurrencies],
       resolvedSnapshot: asJsonObject(snapshot.resolvedSnapshot),
     };
   }
@@ -90,6 +95,7 @@ export class PrismaPricingRepository implements PricingRepository {
     requestJson: JsonObject;
     responseJson: JsonObject;
     durationMs: number;
+    currency: "SEK" | "DKK" | "EUR" | "GBP" | "USD" | "NOK";
     success: boolean;
     failureReason: string | null;
   }): Promise<PricingRunRecord> {
@@ -101,6 +107,7 @@ export class PrismaPricingRepository implements PricingRepository {
         requestJson: asInputJson(input.requestJson),
         responseJson: asInputJson(input.responseJson),
         durationMs: input.durationMs,
+        currency: input.currency,
         success: input.success,
         failureReason: input.failureReason,
       },

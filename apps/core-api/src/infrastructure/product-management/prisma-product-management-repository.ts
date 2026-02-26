@@ -58,6 +58,8 @@ const toProductVersionRecord = (productVersion: ProductVersion): ProductVersionR
   policySchema: asJsonObject(productVersion.policySchema),
   exposureSchemas: asJsonObject(productVersion.exposureSchemas),
   pricingInputSchema: asJsonObject(productVersion.pricingInputSchema),
+  defaultCurrency: productVersion.defaultCurrency,
+  allowedCurrencies: [...productVersion.allowedCurrencies],
   pricingProgramVersionId: productVersion.pricingProgramVersionId,
   activatedAt: productVersion.activatedAt,
   createdAt: productVersion.createdAt,
@@ -135,6 +137,8 @@ export class PrismaProductManagementRepository implements ProductManagementRepos
     policySchema: JsonObject;
     exposureSchemas: JsonObject;
     pricingInputSchema: JsonObject;
+    defaultCurrency: "SEK" | "DKK" | "EUR" | "GBP" | "USD" | "NOK";
+    allowedCurrencies: ReadonlyArray<"SEK" | "DKK" | "EUR" | "GBP" | "USD" | "NOK">;
     pricingProgramVersionId: string | null;
   }): Promise<ProductVersionRecord> {
     const created = await this.prisma.productVersion.create({
@@ -146,6 +150,8 @@ export class PrismaProductManagementRepository implements ProductManagementRepos
         policySchema: toInputJsonValue(input.policySchema),
         exposureSchemas: toInputJsonValue(input.exposureSchemas),
         pricingInputSchema: toInputJsonValue(input.pricingInputSchema),
+        defaultCurrency: input.defaultCurrency,
+        allowedCurrencies: [...input.allowedCurrencies],
         pricingProgramVersionId: input.pricingProgramVersionId,
         status: "DRAFT",
       },

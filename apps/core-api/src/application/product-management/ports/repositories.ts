@@ -27,6 +27,8 @@ export interface ProductVersionRecord {
   readonly policySchema: JsonObject;
   readonly exposureSchemas: JsonObject;
   readonly pricingInputSchema: JsonObject;
+  readonly defaultCurrency: "SEK" | "DKK" | "EUR" | "GBP" | "USD" | "NOK";
+  readonly allowedCurrencies: ReadonlyArray<"SEK" | "DKK" | "EUR" | "GBP" | "USD" | "NOK">;
   readonly pricingProgramVersionId: string | null;
   readonly activatedAt: Date | null;
   readonly createdAt: Date;
@@ -119,6 +121,8 @@ export interface ProductManagementRepository {
     policySchema: JsonObject;
     exposureSchemas: JsonObject;
     pricingInputSchema: JsonObject;
+    defaultCurrency: "SEK" | "DKK" | "EUR" | "GBP" | "USD" | "NOK";
+    allowedCurrencies: ReadonlyArray<"SEK" | "DKK" | "EUR" | "GBP" | "USD" | "NOK">;
     pricingProgramVersionId: string | null;
   }): Promise<ProductVersionRecord>;
   getProductVersionById(productVersionId: string): Promise<ProductVersionRecord | null>;

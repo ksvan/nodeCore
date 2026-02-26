@@ -100,6 +100,8 @@ class InMemoryProductManagementRepository implements ProductManagementRepository
     policySchema: JsonObject;
     exposureSchemas: JsonObject;
     pricingInputSchema: JsonObject;
+    defaultCurrency: "SEK" | "DKK" | "EUR" | "GBP" | "USD" | "NOK";
+    allowedCurrencies: ReadonlyArray<"SEK" | "DKK" | "EUR" | "GBP" | "USD" | "NOK">;
     pricingProgramVersionId: string | null;
   }): Promise<ProductVersionRecord> {
     const now = new Date();
@@ -113,6 +115,8 @@ class InMemoryProductManagementRepository implements ProductManagementRepository
       policySchema: input.policySchema,
       exposureSchemas: input.exposureSchemas,
       pricingInputSchema: input.pricingInputSchema,
+      defaultCurrency: input.defaultCurrency,
+      allowedCurrencies: [...input.allowedCurrencies],
       pricingProgramVersionId: input.pricingProgramVersionId,
       activatedAt: null,
       createdAt: now,

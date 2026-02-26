@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { FastifyInstance, FastifyReply } from "fastify";
-import { RatingInputSchema } from "@nodecore/contracts/pricing";
+import { CurrencyCodeSchema, RatingInputSchema } from "@nodecore/contracts/pricing";
 import { PricingService } from "../../../application/pricing/services/pricing-service.js";
 import { PricingApplicationError } from "../../../application/pricing/services/errors.js";
 import { getPrismaClient } from "../../../infrastructure/persistence/prisma/client.js";
@@ -13,6 +13,7 @@ const CalculatePricingBodySchema = z
     requestId: z.string().uuid().optional(),
     productVersionId: z.string().uuid().optional(),
     resolvedSnapshotId: z.string().uuid().optional(),
+    currency: CurrencyCodeSchema.optional(),
     ratingInput: RatingInputSchema,
   })
   .superRefine((value, ctx) => {
@@ -48,6 +49,7 @@ export const registerPricingRoutes = async (app: FastifyInstance): Promise<void>
         ...(body.requestId ? { requestId: body.requestId } : {}),
         ...(body.productVersionId ? { productVersionId: body.productVersionId } : {}),
         ...(body.resolvedSnapshotId ? { resolvedSnapshotId: body.resolvedSnapshotId } : {}),
+        ...(body.currency ? { currency: body.currency } : {}),
         ratingInput: body.ratingInput,
       });
       return reply.code(200).send(result);

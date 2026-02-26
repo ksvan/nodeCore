@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const CurrencyCodeSchema = z.enum(["SEK", "DKK", "EUR", "GBP", "USD", "NOK"]);
+
 export const RatingInputSchema = z.object({
   policy: z.record(z.unknown()),
   exposures: z.array(z.record(z.unknown())).default([]),
@@ -11,6 +13,7 @@ export const PricingRequestSchema = z.object({
   requestId: z.string().uuid(),
   productVersionId: z.string().uuid(),
   pricingProgramVersionId: z.string().uuid(),
+  currency: CurrencyCodeSchema.default("SEK"),
   input: z.record(z.unknown()),
   ratingInput: RatingInputSchema,
   occurredAt: z.string().datetime(),
@@ -20,7 +23,7 @@ export const PricingResponseSchema = z.object({
   requestId: z.string().uuid(),
   success: z.boolean(),
   totalPremium: z.number(),
-  currency: z.string().min(1).default("USD"),
+  currency: CurrencyCodeSchema.default("SEK"),
   breakdown: z.record(z.number()).default({}),
   details: z.record(z.unknown()).default({}),
 });
@@ -28,3 +31,4 @@ export const PricingResponseSchema = z.object({
 export type RatingInput = z.infer<typeof RatingInputSchema>;
 export type PricingRequest = z.infer<typeof PricingRequestSchema>;
 export type PricingResponse = z.infer<typeof PricingResponseSchema>;
+export type CurrencyCode = z.infer<typeof CurrencyCodeSchema>;

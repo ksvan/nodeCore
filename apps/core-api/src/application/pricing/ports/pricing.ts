@@ -1,4 +1,4 @@
-import type { RatingInput } from "@nodecore/contracts/pricing";
+import type { CurrencyCode, RatingInput } from "@nodecore/contracts/pricing";
 
 export type JsonObject = Record<string, unknown>;
 
@@ -8,6 +8,8 @@ export interface PricingContext {
   readonly pricingProgramFileRef: string;
   readonly pricingInputSchema: JsonObject;
   readonly pricingOutputSchema: JsonObject;
+  readonly defaultCurrency: CurrencyCode;
+  readonly allowedCurrencies: ReadonlyArray<CurrencyCode>;
   readonly resolvedSnapshot: JsonObject;
 }
 
@@ -20,6 +22,7 @@ export interface PricingRunRecord {
   readonly responseJson: JsonObject;
   readonly occurredAt: Date;
   readonly durationMs: number;
+  readonly currency: CurrencyCode;
   readonly success: boolean;
   readonly failureReason: string | null;
 }
@@ -34,6 +37,7 @@ export interface PricingRepository {
     requestJson: JsonObject;
     responseJson: JsonObject;
     durationMs: number;
+    currency: CurrencyCode;
     success: boolean;
     failureReason: string | null;
   }): Promise<PricingRunRecord>;
@@ -66,6 +70,7 @@ export interface PricingDomainEventPublisher {
 export interface CalculatePricingInput {
   readonly productVersionId?: string;
   readonly resolvedSnapshotId?: string;
+  readonly currency?: CurrencyCode;
   readonly ratingInput: RatingInput;
   readonly requestId?: string;
 }
