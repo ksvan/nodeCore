@@ -46,6 +46,25 @@ enum CurrencyCode {
   NOK
 }
 
+enum PolicyStatus {
+  DRAFT
+  ACTIVE
+}
+
+enum PolicyTransactionType {
+  NEW_BUSINESS
+  ENDORSEMENT
+}
+
+enum PolicyTransactionStatus {
+  DRAFT
+  COMMITTED
+}
+
+enum PolicyTermStatus {
+  ACTIVE
+}
+
 model User {
   id           String   @id @default(uuid()) @db.Uuid
   email        String   @unique
@@ -184,4 +203,93 @@ model PricingRun {
 
   @@index([productVersionId, occurredAt])
   @@index([pricingProgramVersionId, occurredAt])
+}
+
+model Policy {
+  id           String              @id @default(uuid()) @db.Uuid
+  policyNumber String              @unique
+  status       PolicyStatus        @default(DRAFT)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  terms        PolicyTerm[]
+  transactions PolicyTransaction[]
+  exposures    PolicyExposureRecord[]
+  coverages    PolicyCoverageRecord[]
+}
+
+model PolicyTerm {
+  id            String                 @id @default(uuid()) @db.Uuid
+  policyId      String                 @db.Uuid
+  termNumber    Int
+  status        PolicyTermStatus       @default(ACTIVE)
+  effectiveFrom DateTime
+  effectiveTo   DateTime
+  createdAt     DateTime               @default(now())
+  policy        Policy                 @relation(fields: [policyId], references: [id], onDelete: Restrict)
+  transactions  PolicyTransaction[]
+  exposures     PolicyExposureRecord[]
+  coverages     PolicyCoverageRecord[]
+
+  @@unique([policyId, termNumber])
+}
+
+model PolicyTransaction {
+  id                      String                  @id @default(uuid()) @db.Uuid
+  policyId                String                  @db.Uuid
+  policyTermId            String?                 @db.Uuid
+  transactionNumber       Int
+  transactionType         PolicyTransactionType
+  status                  PolicyTransactionStatus @default(DRAFT)
+  effectiveFrom           DateTime
+  effectiveTo             DateTime
+  productVersionId        String                  @db.Uuid
+  pricingProgramVersionId String?                 @db.Uuid
+  draftPayload            Json
+  ratingRequestJson       Json?
+  ratingResponseJson      Json?
+  ratedAt                 DateTime?
+  committedAt             DateTime?
+  createdAt               DateTime                @default(now())
+  policy                  Policy                  @relation(fields: [policyId], references: [id], onDelete: Restrict)
+  policyTerm              PolicyTerm?             @relation(fields: [policyTermId], references: [id], onDelete: Restrict)
+  exposures               PolicyExposureRecord[]
+  coverages               PolicyCoverageRecord[]
+
+  @@unique([policyId, transactionNumber])
+}
+
+model PolicyExposureRecord {
+  id                  String            @id @default(uuid()) @db.Uuid
+  policyId            String            @db.Uuid
+  policyTermId        String            @db.Uuid
+  policyTransactionId String            @db.Uuid
+  exposureKey         String
+  data                Json
+  effectiveFrom       DateTime
+  effectiveTo         DateTime
+  createdAt           DateTime          @default(now())
+  policy              Policy            @relation(fields: [policyId], references: [id], onDelete: Restrict)
+  policyTerm          PolicyTerm        @relation(fields: [policyTermId], references: [id], onDelete: Restrict)
+  policyTransaction   PolicyTransaction @relation(fields: [policyTransactionId], references: [id], onDelete: Restrict)
+
+  @@index([policyId, effectiveFrom, effectiveTo])
+  @@index([policyId, exposureKey, effectiveFrom, effectiveTo])
+}
+
+model PolicyCoverageRecord {
+  id                  String            @id @default(uuid()) @db.Uuid
+  policyId            String            @db.Uuid
+  policyTermId        String            @db.Uuid
+  policyTransactionId String            @db.Uuid
+  coverageKey         String
+  data                Json
+  effectiveFrom       DateTime
+  effectiveTo         DateTime
+  createdAt           DateTime          @default(now())
+  policy              Policy            @relation(fields: [policyId], references: [id], onDelete: Restrict)
+  policyTerm          PolicyTerm        @relation(fields: [policyTermId], references: [id], onDelete: Restrict)
+  policyTransaction   PolicyTransaction @relation(fields: [policyTransactionId], references: [id], onDelete: Restrict)
+
+  @@index([policyId, effectiveFrom, effectiveTo])
+  @@index([policyId, coverageKey, effectiveFrom, effectiveTo])
 }

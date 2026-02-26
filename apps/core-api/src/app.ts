@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import { registerAuthPlugin } from "./interfaces/http/plugins/auth.js";
 import { registerRequestLogging } from "./interfaces/http/plugins/request-logging.js";
 import { registerHealthRoute } from "./interfaces/http/routes/health.js";
+import { registerPolicyRoutes } from "./interfaces/http/routes/policy.js";
 import { registerPricingRoutes } from "./interfaces/http/routes/pricing.js";
 import { registerProductManagementRoutes } from "./interfaces/http/routes/product-management.js";
 import { registerEventsGateway } from "./interfaces/ws/events-gateway.js";
@@ -22,6 +23,7 @@ export const buildApp = async () => {
   await registerEventsGateway(app);
   await registerHealthRoute(app);
   await registerPricingRoutes(app);
+  await registerPolicyRoutes(app);
   await registerProductManagementRoutes(app);
 
   app.addHook("onReady", async () => {
