@@ -75,6 +75,7 @@ model ProductVersion {
   pricingProgramVersion   PricingProgramVersion?     @relation(fields: [pricingProgramVersionId], references: [id], onDelete: Restrict)
   snapshot                ProductVersionSnapshot?
   componentRefs           ProductVersionComponentRef[]
+  pricingRuns             PricingRun[]
 
   @@unique([productId, version])
 }
@@ -150,6 +151,25 @@ model PricingProgramVersion {
   updatedAt       DateTime                    @updatedAt
   pricingProgram  PricingProgram              @relation(fields: [pricingProgramId], references: [id], onDelete: Restrict)
   productVersions ProductVersion[]
+  pricingRuns     PricingRun[]
 
   @@unique([pricingProgramId, version])
+}
+
+model PricingRun {
+  id                      String                @id @default(uuid()) @db.Uuid
+  requestId               String                @unique
+  productVersionId        String                @db.Uuid
+  pricingProgramVersionId String                @db.Uuid
+  requestJson             Json
+  responseJson            Json
+  occurredAt              DateTime              @default(now())
+  durationMs              Int
+  success                 Boolean
+  failureReason           String?
+  productVersion          ProductVersion        @relation(fields: [productVersionId], references: [id], onDelete: Restrict)
+  pricingProgramVersion   PricingProgramVersion @relation(fields: [pricingProgramVersionId], references: [id], onDelete: Restrict)
+
+  @@index([productVersionId, occurredAt])
+  @@index([pricingProgramVersionId, occurredAt])
 }

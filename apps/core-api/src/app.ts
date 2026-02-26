@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import { registerAuthPlugin } from "./interfaces/http/plugins/auth.js";
 import { registerRequestLogging } from "./interfaces/http/plugins/request-logging.js";
 import { registerHealthRoute } from "./interfaces/http/routes/health.js";
+import { registerPricingRoutes } from "./interfaces/http/routes/pricing.js";
 import { registerProductManagementRoutes } from "./interfaces/http/routes/product-management.js";
 import { registerEventsGateway } from "./interfaces/ws/events-gateway.js";
 import { getPrismaClient } from "./infrastructure/persistence/prisma/client.js";
@@ -20,6 +21,7 @@ export const buildApp = async () => {
   await registerRequestLogging(app);
   await registerEventsGateway(app);
   await registerHealthRoute(app);
+  await registerPricingRoutes(app);
   await registerProductManagementRoutes(app);
 
   app.addHook("onReady", async () => {

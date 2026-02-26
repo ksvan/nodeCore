@@ -1,0 +1,13 @@
+{
+  "name": "@nodecore/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./pricing": "./src/pricing.ts"
+  },
+  "dependencies": {
+    "zod": "^3.24.2"
+  }
+}

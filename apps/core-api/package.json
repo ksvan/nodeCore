@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "pnpm db:generate && pnpm db:deploy && tsx watch src/server.ts",
+    "dev": "pnpm db:generate && pnpm db:deploy && tsx watch src/main.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
@@ -14,11 +14,13 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:migrate": "prisma migrate dev",
+    "db:generate": "prisma generate",
     "db:deploy": "prisma migrate deploy",
     "db:reset": "prisma migrate reset",
     "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@nodecore/contracts": "workspace:*",
     "@fastify/jwt": "^9.1.0",
     "@fastify/websocket": "^11.2.0",
     "@prisma/client": "^6.6.0",
