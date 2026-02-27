@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1100" viewBox="0 0 1800 1100">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#333" />
+    </marker>
+    <style>
+      .title { font: 700 34px Arial, sans-serif; fill: #1d2430; }
+      .hdr { font: 700 22px Arial, sans-serif; fill: #1d2430; }
+      .txt { font: 16px Arial, sans-serif; fill: #1d2430; }
+      .small { font: 14px Arial, sans-serif; fill: #374151; }
+      .box { stroke: #334155; stroke-width: 2; rx: 12; ry: 12; }
+      .arrow { stroke: #333; stroke-width: 2.4; fill: none; marker-end: url(#arrow); }
+      .label { font: 13px Arial, sans-serif; fill: #334155; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1800" height="1100" fill="#f7fafc"/>
+  <text x="48" y="66" class="title">nodeCore Architecture (Current)</text>
+
+  <rect x="70" y="190" width="290" height="300" class="box" fill="#dff1ff"/>
+  <text x="92" y="228" class="hdr">Clients</text>
+  <text x="92" y="264" class="txt">- util/*.sh manual scripts</text>
+  <text x="92" y="290" class="txt">- curl / API consumers</text>
+  <text x="92" y="316" class="txt">- WebSocket subscribers</text>
+
+  <rect x="430" y="140" width="450" height="430" class="box" fill="#e6f7e9"/>
+  <text x="452" y="178" class="hdr">apps/core-api (Fastify)</text>
+  <text x="452" y="214" class="txt">HTTP Routes</text>
+  <text x="468" y="240" class="txt">- /health</text>
+  <text x="468" y="266" class="txt">- /v1/product-management/*</text>
+  <text x="468" y="292" class="txt">- /v1/pricing/calculate</text>
+  <text x="468" y="318" class="txt">- /v1/policies/*</text>
+  <text x="468" y="344" class="txt">- /v1/billing/*</text>
+  <text x="452" y="382" class="txt">WS Gateway</text>
+  <text x="468" y="408" class="txt">- /ws/events</text>
+  <text x="452" y="446" class="txt">Plugins</text>
+  <text x="468" y="472" class="txt">- JWT auth</text>
+  <text x="468" y="498" class="txt">- request logging</text>
+
+  <rect x="960" y="170" width="320" height="360" class="box" fill="#fff2d8"/>
+  <text x="982" y="208" class="hdr">Application Services</text>
+  <text x="982" y="246" class="txt">- ProductManagementService</text>
+  <text x="982" y="272" class="txt">- PricingService</text>
+  <text x="982" y="298" class="txt">- PolicyService</text>
+  <text x="982" y="324" class="txt">- BillingService</text>
+  <text x="982" y="372" class="txt">Domain rules + orchestration</text>
+
+  <rect x="1330" y="130" width="400" height="470" class="box" fill="#fbe7f3"/>
+  <text x="1352" y="168" class="hdr">Infrastructure</text>
+  <text x="1352" y="206" class="txt">- Prisma repositories</text>
+  <text x="1372" y="232" class="txt">(product, pricing, policy, billing)</text>
+  <text x="1352" y="270" class="txt">- PythonPricingRunner</text>
+  <text x="1372" y="296" class="txt">(executes pricing fileRef)</text>
+  <text x="1352" y="334" class="txt">- WsDomainEventPublisher</text>
+
+  <rect x="1330" y="700" width="190" height="180" class="box" fill="#edf1ff"/>
+  <text x="1352" y="738" class="hdr">PostgreSQL</text>
+  <text x="1352" y="774" class="txt">Persisted via Prisma</text>
+
+  <rect x="1540" y="700" width="190" height="180" class="box" fill="#edf1ff"/>
+  <text x="1562" y="738" class="hdr">Pricing Programs</text>
+  <text x="1562" y="774" class="small">Python scripts</text>
+  <text x="1562" y="798" class="small">referenced by</text>
+  <text x="1562" y="822" class="small">pricingProgramVersion.fileRef</text>
+
+  <rect x="960" y="700" width="320" height="180" class="box" fill="#e2efff"/>
+  <text x="982" y="738" class="hdr">Domain Events</text>
+  <text x="982" y="774" class="txt">Published to WS consumers</text>
+
+  <line x1="360" y1="280" x2="430" y2="280" class="arrow"/>
+  <text x="378" y="266" class="label">HTTP</text>
+
+  <line x1="360" y1="340" x2="430" y2="340" class="arrow"/>
+  <text x="386" y="328" class="label">WS</text>
+
+  <line x1="880" y1="320" x2="960" y2="320" class="arrow"/>
+  <text x="898" y="306" class="label">handlers</text>
+
+  <line x1="1280" y1="300" x2="1330" y2="300" class="arrow"/>
+  <text x="1288" y="286" class="label">ports</text>
+
+  <line x1="1430" y1="600" x2="1430" y2="700" class="arrow"/>
+  <text x="1440" y="652" class="label">Prisma</text>
+
+  <line x1="1635" y1="600" x2="1635" y2="700" class="arrow"/>
+  <text x="1644" y="652" class="label">python3</text>
+
+  <line x1="1120" y1="530" x2="1120" y2="700" class="arrow"/>
+  <text x="1130" y="618" class="label">publish</text>
+
+  <line x1="960" y1="790" x2="840" y2="570" class="arrow"/>
+  <text x="850" y="666" class="label">ws broadcast</text>
+</svg>

@@ -1,9 +1,18 @@
 export type JsonObject = Record<string, unknown>;
 
+export type PolicyStatus = "DRAFT" | "ACTIVE" | "RETIRED";
+export type PolicyTermStatus = "DRAFT" | "ACTIVE" | "CLOSED";
+export type PolicyTransactionType = "NEW_BUSINESS" | "ENDORSEMENT";
+export type PolicyTransactionStatus = "DRAFT" | "COMMITTED";
+export type PolicyRiskType = "VEHICLE" | "PROPERTY" | "LOCATION" | "PERSON" | "OTHER";
+export type CoverageTermValueType = "MONEY" | "NUMBER" | "STRING" | "BOOLEAN";
+
 export interface PolicyRecord {
   id: string;
   policyNumber: string;
-  status: "DRAFT" | "ACTIVE";
+  status: PolicyStatus;
+  productId: string;
+  productVersionId: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -11,118 +20,251 @@ export interface PolicyRecord {
 export interface PolicyTermRecord {
   id: string;
   policyId: string;
-  termNumber: number;
-  effectiveFrom: Date;
-  effectiveTo: Date;
+  termStart: Date;
+  termEnd: Date;
+  status: PolicyTermStatus;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface PolicyTransactionRecord {
   id: string;
   policyId: string;
-  policyTermId: string | null;
-  transactionNumber: number;
-  transactionType: "NEW_BUSINESS" | "ENDORSEMENT";
-  status: "DRAFT" | "COMMITTED";
-  effectiveFrom: Date;
-  effectiveTo: Date;
-  productVersionId: string;
-  pricingProgramVersionId: string | null;
-  draftPayload: JsonObject;
-  ratingRequestJson: JsonObject | null;
-  ratingResponseJson: JsonObject | null;
-  ratedAt: Date | null;
-  committedAt: Date | null;
+  termId: string;
+  type: PolicyTransactionType;
+  status: PolicyTransactionStatus;
+  effectiveAt: Date;
+  requestId: string | null;
+  idempotencyKey: string | null;
   createdAt: Date;
+  committedAt: Date | null;
 }
 
-export interface PolicyExposureRecord {
+export interface PolicyRiskRecord {
   id: string;
   policyId: string;
-  exposureKey: string;
-  data: JsonObject;
+  termId: string;
+  riskType: PolicyRiskType;
+  riskKey: string | null;
+  attributes: JsonObject;
   effectiveFrom: Date;
   effectiveTo: Date;
+  createdByTransactionId: string;
   createdAt: Date;
 }
 
 export interface PolicyCoverageRecord {
   id: string;
   policyId: string;
-  coverageKey: string;
-  data: JsonObject;
+  termId: string;
+  coverageCode: string;
+  appliesToRiskId: string | null;
+  attributes: JsonObject;
   effectiveFrom: Date;
   effectiveTo: Date;
+  createdByTransactionId: string;
+  createdAt: Date;
+}
+
+export interface CoverageTermRecord {
+  id: string;
+  policyCoverageId: string;
+  termCode: string;
+  valueType: CoverageTermValueType;
+  moneyAmount: string | null;
+  moneyCurrency: string | null;
+  numberValue: string | null;
+  stringValue: string | null;
+  booleanValue: boolean | null;
+  effectiveFrom: Date;
+  effectiveTo: Date;
+  createdByTransactionId: string;
+  createdAt: Date;
+}
+
+export interface PolicyPremiumRecord {
+  id: string;
+  policyId: string;
+  termId: string;
+  coverageId: string | null;
+  riskId: string | null;
+  totalAmount: string;
+  currency: string;
+  breakdown: JsonObject | null;
+  effectiveFrom: Date;
+  effectiveTo: Date;
+  createdByTransactionId: string;
+  createdAt: Date;
+}
+
+export interface PolicyRiskDraftRecord {
+  id: string;
+  policyId: string;
+  transactionId: string;
+  riskType: PolicyRiskType;
+  riskKey: string | null;
+  attributes: JsonObject;
+  createdAt: Date;
+}
+
+export interface PolicyCoverageDraftRecord {
+  id: string;
+  policyId: string;
+  transactionId: string;
+  coverageCode: string;
+  appliesToRiskKey: string | null;
+  attributes: JsonObject;
+  createdAt: Date;
+}
+
+export interface CoverageTermDraftRecord {
+  id: string;
+  policyId: string;
+  transactionId: string;
+  policyCoverageDraftId: string;
+  termCode: string;
+  valueType: CoverageTermValueType;
+  moneyAmount: string | null;
+  moneyCurrency: string | null;
+  numberValue: string | null;
+  stringValue: string | null;
+  booleanValue: boolean | null;
   createdAt: Date;
 }
 
 export interface PolicyRepository {
-  createPolicyDraft(input: { policyNumber: string }): Promise<PolicyRecord>;
-  getPolicyById(policyId: string): Promise<PolicyRecord | null>;
-  updatePolicyStatus(policyId: string, status: "DRAFT" | "ACTIVE"): Promise<PolicyRecord>;
-
-  createPolicyTransaction(input: {
-    policyId: string;
-    policyTermId: string | null;
-    transactionNumber: number;
-    transactionType: "NEW_BUSINESS" | "ENDORSEMENT";
-    effectiveFrom: Date;
-    effectiveTo: Date;
+  createPolicy(input: {
+    policyNumber: string;
+    productId: string;
     productVersionId: string;
-    draftPayload: JsonObject;
-  }): Promise<PolicyTransactionRecord>;
-  getPolicyTransactionById(transactionId: string): Promise<PolicyTransactionRecord | null>;
-  getNextTransactionNumber(policyId: string): Promise<number>;
-  updateTransactionDraftPayload(transactionId: string, draftPayload: JsonObject): Promise<PolicyTransactionRecord>;
-  setTransactionRating(input: {
-    transactionId: string;
-    pricingProgramVersionId: string | null;
-    requestJson: JsonObject;
-    responseJson: JsonObject;
-  }): Promise<PolicyTransactionRecord>;
-  commitPolicyTransaction(transactionId: string, committedAt: Date): Promise<PolicyTransactionRecord>;
+  }): Promise<PolicyRecord>;
+  listPolicies(query?: string): Promise<ReadonlyArray<PolicyRecord>>;
+  getPolicyById(policyId: string): Promise<PolicyRecord | null>;
+  updatePolicyStatus(policyId: string, status: PolicyStatus): Promise<PolicyRecord>;
 
   createPolicyTerm(input: {
     policyId: string;
-    termNumber: number;
-    effectiveFrom: Date;
-    effectiveTo: Date;
+    termStart: Date;
+    termEnd: Date;
+    status: PolicyTermStatus;
   }): Promise<PolicyTermRecord>;
+  updatePolicyTermStatus(termId: string, status: PolicyTermStatus): Promise<PolicyTermRecord>;
+  getPolicyTermById(termId: string): Promise<PolicyTermRecord | null>;
   getLatestPolicyTerm(policyId: string): Promise<PolicyTermRecord | null>;
 
-  closeExposureRecords(policyId: string, keys: ReadonlyArray<string>, effectiveTo: Date): Promise<void>;
-  closeCoverageRecords(policyId: string, keys: ReadonlyArray<string>, effectiveTo: Date): Promise<void>;
-  createExposureRecords(input: {
+  createPolicyTransaction(input: {
     policyId: string;
-    policyTermId: string;
-    policyTransactionId: string;
+    termId: string;
+    type: PolicyTransactionType;
+    effectiveAt: Date;
+    requestId: string | null;
+    idempotencyKey: string | null;
+  }): Promise<PolicyTransactionRecord>;
+  listPolicyTransactions(policyId: string): Promise<ReadonlyArray<PolicyTransactionRecord>>;
+  getPolicyTransactionById(transactionId: string): Promise<PolicyTransactionRecord | null>;
+  commitPolicyTransaction(transactionId: string, committedAt: Date): Promise<PolicyTransactionRecord>;
+
+  replaceRiskDrafts(input: {
+    policyId: string;
+    transactionId: string;
+    risks: ReadonlyArray<{
+      riskType: PolicyRiskType;
+      riskKey: string | null;
+      attributes: JsonObject;
+    }>;
+  }): Promise<void>;
+  listRiskDrafts(transactionId: string): Promise<ReadonlyArray<PolicyRiskDraftRecord>>;
+
+  replaceCoverageDrafts(input: {
+    policyId: string;
+    transactionId: string;
+    coverages: ReadonlyArray<{
+      coverageCode: string;
+      appliesToRiskKey: string | null;
+      attributes: JsonObject;
+    }>;
+  }): Promise<void>;
+  listCoverageDrafts(transactionId: string): Promise<ReadonlyArray<PolicyCoverageDraftRecord>>;
+
+  replaceCoverageTermDrafts(input: {
+    policyId: string;
+    transactionId: string;
+    terms: ReadonlyArray<{
+      coverageCode: string;
+      appliesToRiskKey: string | null;
+      termCode: string;
+      valueType: CoverageTermValueType;
+      moneyAmount: string | null;
+      moneyCurrency: string | null;
+      numberValue: string | null;
+      stringValue: string | null;
+      booleanValue: boolean | null;
+    }>;
+  }): Promise<void>;
+  listCoverageTermDrafts(transactionId: string): Promise<ReadonlyArray<CoverageTermDraftRecord>>;
+
+  closeActiveRisks(policyId: string, effectiveAt: Date): Promise<void>;
+  closeActiveCoverages(policyId: string, effectiveAt: Date): Promise<void>;
+  closeActiveCoverageTerms(policyId: string, effectiveAt: Date): Promise<void>;
+  closeActivePremiums(policyId: string, effectiveAt: Date): Promise<void>;
+
+  createPolicyRisks(input: {
+    policyId: string;
+    termId: string;
+    createdByTransactionId: string;
     effectiveFrom: Date;
     effectiveTo: Date;
-    exposures: ReadonlyArray<{ exposureKey: string; data: JsonObject }>;
-  }): Promise<void>;
-  createCoverageRecords(input: {
+    risks: ReadonlyArray<{
+      riskType: PolicyRiskType;
+      riskKey: string | null;
+      attributes: JsonObject;
+    }>;
+  }): Promise<ReadonlyArray<PolicyRiskRecord>>;
+
+  createPolicyCoverages(input: {
     policyId: string;
-    policyTermId: string;
-    policyTransactionId: string;
+    termId: string;
+    createdByTransactionId: string;
     effectiveFrom: Date;
     effectiveTo: Date;
-    coverages: ReadonlyArray<{ coverageKey: string; data: JsonObject }>;
+    coverages: ReadonlyArray<{
+      coverageCode: string;
+      appliesToRiskId: string | null;
+      attributes: JsonObject;
+    }>;
+  }): Promise<ReadonlyArray<PolicyCoverageRecord>>;
+
+  createCoverageTerms(input: {
+    createdByTransactionId: string;
+    effectiveFrom: Date;
+    effectiveTo: Date;
+    terms: ReadonlyArray<{
+      policyCoverageId: string;
+      termCode: string;
+      valueType: CoverageTermValueType;
+      moneyAmount: string | null;
+      moneyCurrency: string | null;
+      numberValue: string | null;
+      stringValue: string | null;
+      booleanValue: boolean | null;
+    }>;
   }): Promise<void>;
 
-  getAsOfExposureRecords(policyId: string, asOfDate: Date): Promise<ReadonlyArray<PolicyExposureRecord>>;
-  getAsOfCoverageRecords(policyId: string, asOfDate: Date): Promise<ReadonlyArray<PolicyCoverageRecord>>;
-}
+  getAsOfRisks(policyId: string, asOf: Date): Promise<ReadonlyArray<PolicyRiskRecord>>;
+  getAsOfCoverages(policyId: string, asOf: Date): Promise<ReadonlyArray<PolicyCoverageRecord>>;
+  getAsOfCoverageTermsByCoverageIds(
+    coverageIds: ReadonlyArray<string>,
+    asOf: Date,
+  ): Promise<ReadonlyArray<CoverageTermRecord>>;
+  getAsOfPremiums(policyId: string, asOf: Date): Promise<ReadonlyArray<PolicyPremiumRecord>>;
 
-export interface PolicyPricingGateway {
-  calculate(input: {
-    productVersionId: string;
-    ratingInput: {
-      policy: JsonObject;
-      exposures: ReadonlyArray<JsonObject>;
-      coverages: ReadonlyArray<JsonObject>;
-      context?: JsonObject;
-    };
-  }): Promise<{ requestId: string; pricingProgramVersionId: string; response: JsonObject; request: JsonObject }>;
+  getIdempotency(scope: string, key: string): Promise<JsonObject | null>;
+  saveIdempotency(input: {
+    policyId: string | null;
+    scope: string;
+    key: string;
+    responseJson: JsonObject;
+  }): Promise<void>;
 }
 
 export interface DomainEventPublisher {

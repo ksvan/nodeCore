@@ -79,6 +79,8 @@ If not → It is a **Policy Edit**
 ---
 
 ## Policy States (Definitions) - Lifecycle
+The changes should happen automatically in the process. Default is draft when made initially.
+If offered to the customer, via an advisor or digitally, it should become Quoted etc, as laid out below. 
 
 **Draft**
 Policy is being created or edited. Not offered or legally binding.

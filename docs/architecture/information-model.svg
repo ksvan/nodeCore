@@ -1,0 +1,249 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2200" height="1400" viewBox="0 0 2200 1400">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"/>
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font: 700 34px Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 500 16px Arial, sans-serif; fill: #334155; }
+      .domainTitle { font: 700 20px Arial, sans-serif; fill: #0f172a; }
+      .entityTitle { font: 700 16px Arial, sans-serif; fill: #0f172a; }
+      .entityText { font: 13px Arial, sans-serif; fill: #1e293b; }
+      .box { stroke: #334155; stroke-width: 1.5; rx: 10; ry: 10; }
+      .group { stroke: #94a3b8; stroke-width: 1.2; stroke-dasharray: 7 5; rx: 14; ry: 14; fill-opacity: 0.35; }
+      .rel { stroke: #334155; stroke-width: 1.7; fill: none; marker-end: url(#arrow); }
+      .label { font: 12px Arial, sans-serif; fill: #334155; }
+      .enumBox { stroke: #475569; stroke-width: 1.2; rx: 8; ry: 8; fill: #eef2ff; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="2200" height="1400"/>
+  <text class="title" x="40" y="58">nodeCore Information Model</text>
+  <text class="subtitle" x="40" y="86">Source: apps/core-api/prisma/schema.prisma (entities + key relations)</text>
+
+  <!-- Product + Pricing domain -->
+  <rect class="group" x="30" y="120" width="1040" height="700" fill="#dcfce7"/>
+  <text class="domainTitle" x="48" y="152">Product + Pricing</text>
+
+  <rect class="box" x="60" y="180" width="220" height="150" fill="#ffffff"/>
+  <text class="entityTitle" x="74" y="205">Product</text>
+  <text class="entityText" x="74" y="228">PK id (uuid)</text>
+  <text class="entityText" x="74" y="248">productCode (unique)</text>
+  <text class="entityText" x="74" y="268">name, description</text>
+  <text class="entityText" x="74" y="288">status: ProductStatus</text>
+
+  <rect class="box" x="340" y="180" width="290" height="220" fill="#ffffff"/>
+  <text class="entityTitle" x="354" y="205">ProductVersion</text>
+  <text class="entityText" x="354" y="228">PK id (uuid), FK productId</text>
+  <text class="entityText" x="354" y="248">version (unique with productId)</text>
+  <text class="entityText" x="354" y="268">status, effectiveFrom, effectiveTo</text>
+  <text class="entityText" x="354" y="288">policySchema, exposureSchemas</text>
+  <text class="entityText" x="354" y="308">pricingInputSchema</text>
+  <text class="entityText" x="354" y="328">defaultCurrency, allowedCurrencies[]</text>
+  <text class="entityText" x="354" y="348">FK pricingProgramVersionId?</text>
+
+  <rect class="box" x="700" y="180" width="310" height="180" fill="#ffffff"/>
+  <text class="entityTitle" x="714" y="205">PricingProgramVersion</text>
+  <text class="entityText" x="714" y="228">PK id (uuid), FK pricingProgramId</text>
+  <text class="entityText" x="714" y="248">version (unique with pricingProgramId)</text>
+  <text class="entityText" x="714" y="268">status, fileRef</text>
+  <text class="entityText" x="714" y="288">inputSchema, outputSchema, metadata</text>
+
+  <rect class="box" x="700" y="420" width="250" height="130" fill="#ffffff"/>
+  <text class="entityTitle" x="714" y="445">PricingProgram</text>
+  <text class="entityText" x="714" y="468">PK id (uuid)</text>
+  <text class="entityText" x="714" y="488">programCode (unique)</text>
+  <text class="entityText" x="714" y="508">name, description</text>
+
+  <rect class="box" x="340" y="450" width="250" height="130" fill="#ffffff"/>
+  <text class="entityTitle" x="354" y="475">ProductVersionSnapshot</text>
+  <text class="entityText" x="354" y="498">PK id (uuid)</text>
+  <text class="entityText" x="354" y="518">FK productVersionId (unique)</text>
+  <text class="entityText" x="354" y="538">resolvedSnapshot (json)</text>
+
+  <rect class="box" x="60" y="420" width="220" height="150" fill="#ffffff"/>
+  <text class="entityTitle" x="74" y="445">Component</text>
+  <text class="entityText" x="74" y="468">PK id (uuid)</text>
+  <text class="entityText" x="74" y="488">componentCode (unique)</text>
+  <text class="entityText" x="74" y="508">type, name, description</text>
+
+  <rect class="box" x="60" y="610" width="260" height="170" fill="#ffffff"/>
+  <text class="entityTitle" x="74" y="635">ComponentVersion</text>
+  <text class="entityText" x="74" y="658">PK id (uuid), FK componentId</text>
+  <text class="entityText" x="74" y="678">version (unique with componentId)</text>
+  <text class="entityText" x="74" y="698">status, schema, metadata</text>
+  <text class="entityText" x="74" y="718">releasedAt</text>
+
+  <rect class="box" x="360" y="640" width="320" height="140" fill="#ffffff"/>
+  <text class="entityTitle" x="374" y="665">ProductVersionComponentRef</text>
+  <text class="entityText" x="374" y="688">PK id (uuid)</text>
+  <text class="entityText" x="374" y="708">FK productVersionId, FK componentVersionId</text>
+  <text class="entityText" x="374" y="728">configOverrides (json), unique pair</text>
+
+  <rect class="box" x="740" y="610" width="270" height="170" fill="#ffffff"/>
+  <text class="entityTitle" x="754" y="635">PricingRun</text>
+  <text class="entityText" x="754" y="658">PK id (uuid), requestId (unique)</text>
+  <text class="entityText" x="754" y="678">FK productVersionId, FK pricingProgramVersionId</text>
+  <text class="entityText" x="754" y="698">requestJson, responseJson</text>
+  <text class="entityText" x="754" y="718">currency, success, failureReason</text>
+
+  <!-- Policy domain -->
+  <rect class="group" x="1100" y="120" width="1060" height="620" fill="#dbeafe"/>
+  <text class="domainTitle" x="1118" y="152">Policy</text>
+
+  <rect class="box" x="1130" y="180" width="230" height="150" fill="#ffffff"/>
+  <text class="entityTitle" x="1144" y="205">Policy</text>
+  <text class="entityText" x="1144" y="228">PK id (uuid)</text>
+  <text class="entityText" x="1144" y="248">policyNumber (unique)</text>
+  <text class="entityText" x="1144" y="268">status: PolicyStatus</text>
+
+  <rect class="box" x="1410" y="180" width="260" height="170" fill="#ffffff"/>
+  <text class="entityTitle" x="1424" y="205">PolicyTerm</text>
+  <text class="entityText" x="1424" y="228">PK id (uuid), FK policyId</text>
+  <text class="entityText" x="1424" y="248">termNumber (unique with policyId)</text>
+  <text class="entityText" x="1424" y="268">status, effectiveFrom, effectiveTo</text>
+
+  <rect class="box" x="1720" y="180" width="400" height="220" fill="#ffffff"/>
+  <text class="entityTitle" x="1734" y="205">PolicyTransaction</text>
+  <text class="entityText" x="1734" y="228">PK id (uuid), FK policyId, FK policyTermId?</text>
+  <text class="entityText" x="1734" y="248">transactionNumber (unique with policyId)</text>
+  <text class="entityText" x="1734" y="268">transactionType, status</text>
+  <text class="entityText" x="1734" y="288">effectiveFrom, effectiveTo</text>
+  <text class="entityText" x="1734" y="308">FK productVersionId, FK pricingProgramVersionId?</text>
+  <text class="entityText" x="1734" y="328">draftPayload, ratingRequest/Response</text>
+
+  <rect class="box" x="1410" y="430" width="330" height="170" fill="#ffffff"/>
+  <text class="entityTitle" x="1424" y="455">PolicyExposureRecord</text>
+  <text class="entityText" x="1424" y="478">PK id (uuid)</text>
+  <text class="entityText" x="1424" y="498">FK policyId, policyTermId, policyTransactionId</text>
+  <text class="entityText" x="1424" y="518">exposureKey, data, effective range</text>
+
+  <rect class="box" x="1760" y="430" width="330" height="170" fill="#ffffff"/>
+  <text class="entityTitle" x="1774" y="455">PolicyCoverageRecord</text>
+  <text class="entityText" x="1774" y="478">PK id (uuid)</text>
+  <text class="entityText" x="1774" y="498">FK policyId, policyTermId, policyTransactionId</text>
+  <text class="entityText" x="1774" y="518">coverageKey, data, effective range</text>
+
+  <rect class="box" x="1130" y="430" width="240" height="130" fill="#ffffff"/>
+  <text class="entityTitle" x="1144" y="455">PolicyEditLog</text>
+  <text class="entityText" x="1144" y="478">PK id (uuid), FK policyId</text>
+  <text class="entityText" x="1144" y="498">editType, data</text>
+
+  <!-- Billing domain -->
+  <rect class="group" x="30" y="860" width="2130" height="500" fill="#fce7f3"/>
+  <text class="domainTitle" x="48" y="892">Billing + Invoicing</text>
+
+  <rect class="box" x="60" y="930" width="250" height="170" fill="#ffffff"/>
+  <text class="entityTitle" x="74" y="955">BillingAccount</text>
+  <text class="entityText" x="74" y="978">PK id (uuid), partyId</text>
+  <text class="entityText" x="74" y="998">status: BillingAccountStatus</text>
+  <text class="entityText" x="74" y="1018">createdAt, updatedAt</text>
+
+  <rect class="box" x="360" y="930" width="310" height="210" fill="#ffffff"/>
+  <text class="entityTitle" x="374" y="955">Invoice</text>
+  <text class="entityText" x="374" y="978">PK id (uuid), FK billingAccountId</text>
+  <text class="entityText" x="374" y="998">invoiceNumber (unique), status</text>
+  <text class="entityText" x="374" y="1018">currency, dueDate, totalAmount</text>
+  <text class="entityText" x="374" y="1038">postedAt, createdAt, updatedAt</text>
+
+  <rect class="box" x="720" y="930" width="300" height="170" fill="#ffffff"/>
+  <text class="entityTitle" x="734" y="955">InvoiceLine</text>
+  <text class="entityText" x="734" y="978">PK id (uuid), FK invoiceId</text>
+  <text class="entityText" x="734" y="998">description, quantity</text>
+  <text class="entityText" x="734" y="1018">unitAmount, lineTotal</text>
+
+  <rect class="box" x="1070" y="930" width="300" height="190" fill="#ffffff"/>
+  <text class="entityTitle" x="1084" y="955">Payment</text>
+  <text class="entityText" x="1084" y="978">PK id (uuid), FK billingAccountId</text>
+  <text class="entityText" x="1084" y="998">amount, currency</text>
+  <text class="entityText" x="1084" y="1018">status: PaymentStatus</text>
+  <text class="entityText" x="1084" y="1038">providerRef, createdAt, updatedAt</text>
+
+  <rect class="box" x="1420" y="930" width="300" height="170" fill="#ffffff"/>
+  <text class="entityTitle" x="1434" y="955">PaymentAllocation</text>
+  <text class="entityText" x="1434" y="978">PK id (uuid)</text>
+  <text class="entityText" x="1434" y="998">FK paymentId, FK invoiceId</text>
+  <text class="entityText" x="1434" y="1018">amount, createdAt</text>
+  <text class="entityText" x="1434" y="1038">unique(paymentId, invoiceId)</text>
+
+  <rect class="box" x="1770" y="930" width="370" height="170" fill="#ffffff"/>
+  <text class="entityTitle" x="1784" y="955">BillingIdempotencyKey</text>
+  <text class="entityText" x="1784" y="978">PK id (uuid)</text>
+  <text class="entityText" x="1784" y="998">commandScope + idempotencyKey (unique)</text>
+  <text class="entityText" x="1784" y="1018">responseJson, createdAt</text>
+
+  <rect class="box" x="1770" y="1140" width="370" height="170" fill="#ffffff"/>
+  <text class="entityTitle" x="1784" y="1165">BillingAuditLog</text>
+  <text class="entityText" x="1784" y="1188">PK id (uuid), FK billingAccountId?</text>
+  <text class="entityText" x="1784" y="1208">entityType, entityId, action</text>
+  <text class="entityText" x="1784" y="1228">data, createdAt</text>
+
+  <!-- Shared enums -->
+  <rect class="enumBox" x="60" y="1240" width="520" height="95"/>
+  <text class="entityTitle" x="74" y="1265">Shared enum highlights</text>
+  <text class="entityText" x="74" y="1288">CurrencyCode: SEK, DKK, EUR, GBP, USD, NOK</text>
+  <text class="entityText" x="74" y="1308">InvoiceStatus: POSTED, PARTIALLY_PAID, PAID | PaymentStatus: RECEIVED, ALLOCATED</text>
+
+  <!-- Relationships -->
+  <path class="rel" d="M 280 245 L 340 245"/>
+  <text class="label" x="286" y="236">1 to many</text>
+
+  <path class="rel" d="M 630 245 L 700 245"/>
+  <text class="label" x="640" y="236">many to 1</text>
+
+  <path class="rel" d="M 825 420 L 825 360"/>
+  <text class="label" x="832" y="390">1 to many versions</text>
+
+  <path class="rel" d="M 470 400 L 470 450"/>
+  <text class="label" x="478" y="432">1 to 0..1 snapshot</text>
+
+  <path class="rel" d="M 170 570 L 170 610"/>
+  <text class="label" x="178" y="595">1 to many</text>
+
+  <path class="rel" d="M 320 690 L 360 690"/>
+  <text class="label" x="324" y="680">many to many bridge</text>
+
+  <path class="rel" d="M 630 710 L 740 710"/>
+  <text class="label" x="650" y="700">pricing execution</text>
+
+  <path class="rel" d="M 1360 245 L 1410 245"/>
+  <text class="label" x="1368" y="236">1 to many terms</text>
+
+  <path class="rel" d="M 1670 265 L 1720 265"/>
+  <text class="label" x="1676" y="256">1 to many tx</text>
+
+  <path class="rel" d="M 1920 400 L 1575 430"/>
+  <text class="label" x="1730" y="414">tx to exposures</text>
+
+  <path class="rel" d="M 1960 400 L 1930 430"/>
+  <text class="label" x="1970" y="414">tx to coverages</text>
+
+  <path class="rel" d="M 1245 330 L 1245 430"/>
+  <text class="label" x="1252" y="382">policy to edits</text>
+
+  <path class="rel" d="M 310 990 L 360 990"/>
+  <text class="label" x="320" y="980">1 to many invoices</text>
+
+  <path class="rel" d="M 310 1040 L 1070 1040"/>
+  <text class="label" x="650" y="1030">1 to many payments</text>
+
+  <path class="rel" d="M 670 1015 L 720 1015"/>
+  <text class="label" x="676" y="1006">1 to many lines</text>
+
+  <path class="rel" d="M 1370 1015 L 1420 1015"/>
+  <text class="label" x="1376" y="1006">1 to many allocations</text>
+
+  <path class="rel" d="M 1420 1060 L 670 1060"/>
+  <text class="label" x="1010" y="1052">allocations reference invoices</text>
+
+  <path class="rel" d="M 310 1080 L 1770 1220"/>
+  <text class="label" x="1020" y="1166">audit logs optionally bind to account</text>
+
+  <!-- Cross-domain refs -->
+  <path class="rel" d="M 1870 400 L 600 240"/>
+  <text class="label" x="1180" y="300">PolicyTransaction FK productVersionId</text>
+
+  <path class="rel" d="M 1880 430 L 865 260"/>
+  <text class="label" x="1345" y="320">PolicyTransaction FK pricingProgramVersionId?</text>
+</svg>

@@ -1,18 +1,30 @@
 import type {
+  CoverageTerm,
+  CoverageTermDraft,
   Policy,
-  PolicyCoverageRecord,
-  PolicyExposureRecord,
+  PolicyCoverage,
+  PolicyCoverageDraft,
+  PolicyIdempotencyKey,
+  PolicyPremium,
+  PolicyRisk,
+  PolicyRiskDraft,
   PolicyTerm,
   PolicyTransaction,
   Prisma,
   PrismaClient,
 } from "@prisma/client";
+import { Prisma as PrismaNamespace } from "@prisma/client";
 import type {
+  CoverageTermDraftRecord,
+  CoverageTermRecord,
   JsonObject,
-  PolicyCoverageRecord as PolicyCoverageRecordModel,
-  PolicyExposureRecord as PolicyExposureRecordModel,
+  PolicyCoverageDraftRecord,
+  PolicyCoverageRecord,
+  PolicyPremiumRecord,
   PolicyRecord,
   PolicyRepository,
+  PolicyRiskDraftRecord,
+  PolicyRiskRecord,
   PolicyTermRecord,
   PolicyTransactionRecord,
 } from "../../application/policy/ports/policy.js";
@@ -24,301 +36,602 @@ const mapPolicy = (value: Policy): PolicyRecord => ({
   id: value.id,
   policyNumber: value.policyNumber,
   status: value.status,
+  productId: value.productId,
+  productVersionId: value.productVersionId,
   createdAt: value.createdAt,
   updatedAt: value.updatedAt,
 });
 
-const mapTerm = (value: PolicyTerm): PolicyTermRecord => ({
+const mapPolicyTerm = (value: PolicyTerm): PolicyTermRecord => ({
   id: value.id,
   policyId: value.policyId,
-  termNumber: value.termNumber,
-  effectiveFrom: value.effectiveFrom,
-  effectiveTo: value.effectiveTo,
-  createdAt: value.createdAt,
-});
-
-const mapTx = (value: PolicyTransaction): PolicyTransactionRecord => ({
-  id: value.id,
-  policyId: value.policyId,
-  policyTermId: value.policyTermId,
-  transactionNumber: value.transactionNumber,
-  transactionType: value.transactionType,
+  termStart: value.termStart,
+  termEnd: value.termEnd,
   status: value.status,
-  effectiveFrom: value.effectiveFrom,
-  effectiveTo: value.effectiveTo,
-  productVersionId: value.productVersionId,
-  pricingProgramVersionId: value.pricingProgramVersionId,
-  draftPayload: asJsonObject(value.draftPayload),
-  ratingRequestJson: value.ratingRequestJson ? asJsonObject(value.ratingRequestJson) : null,
-  ratingResponseJson: value.ratingResponseJson ? asJsonObject(value.ratingResponseJson) : null,
-  ratedAt: value.ratedAt,
+  createdAt: value.createdAt,
+  updatedAt: value.updatedAt,
+});
+
+const mapPolicyTransaction = (value: PolicyTransaction): PolicyTransactionRecord => ({
+  id: value.id,
+  policyId: value.policyId,
+  termId: value.termId,
+  type: value.type,
+  status: value.status,
+  effectiveAt: value.effectiveAt,
+  requestId: value.requestId,
+  idempotencyKey: value.idempotencyKey,
+  createdAt: value.createdAt,
   committedAt: value.committedAt,
+});
+
+const mapPolicyRisk = (value: PolicyRisk): PolicyRiskRecord => ({
+  id: value.id,
+  policyId: value.policyId,
+  termId: value.termId,
+  riskType: value.riskType,
+  riskKey: value.riskKey,
+  attributes: asJsonObject(value.attributes),
+  effectiveFrom: value.effectiveFrom,
+  effectiveTo: value.effectiveTo,
+  createdByTransactionId: value.createdByTransactionId,
   createdAt: value.createdAt,
 });
 
-const mapExposure = (value: PolicyExposureRecord): PolicyExposureRecordModel => ({
+const mapPolicyCoverage = (value: PolicyCoverage): PolicyCoverageRecord => ({
   id: value.id,
   policyId: value.policyId,
-  exposureKey: value.exposureKey,
-  data: asJsonObject(value.data),
+  termId: value.termId,
+  coverageCode: value.coverageCode,
+  appliesToRiskId: value.appliesToRiskId,
+  attributes: asJsonObject(value.attributes),
   effectiveFrom: value.effectiveFrom,
   effectiveTo: value.effectiveTo,
+  createdByTransactionId: value.createdByTransactionId,
   createdAt: value.createdAt,
 });
 
-const mapCoverage = (value: PolicyCoverageRecord): PolicyCoverageRecordModel => ({
+const mapCoverageTerm = (value: CoverageTerm): CoverageTermRecord => ({
   id: value.id,
-  policyId: value.policyId,
-  coverageKey: value.coverageKey,
-  data: asJsonObject(value.data),
+  policyCoverageId: value.policyCoverageId,
+  termCode: value.termCode,
+  valueType: value.valueType,
+  moneyAmount: value.moneyAmount?.toFixed(2) ?? null,
+  moneyCurrency: value.moneyCurrency,
+  numberValue: value.numberValue?.toFixed(4) ?? null,
+  stringValue: value.stringValue,
+  booleanValue: value.booleanValue,
   effectiveFrom: value.effectiveFrom,
   effectiveTo: value.effectiveTo,
+  createdByTransactionId: value.createdByTransactionId,
   createdAt: value.createdAt,
 });
+
+const mapPolicyPremium = (value: PolicyPremium): PolicyPremiumRecord => ({
+  id: value.id,
+  policyId: value.policyId,
+  termId: value.termId,
+  coverageId: value.coverageId,
+  riskId: value.riskId,
+  totalAmount: value.totalAmount.toFixed(2),
+  currency: value.currency,
+  breakdown: value.breakdown ? asJsonObject(value.breakdown) : null,
+  effectiveFrom: value.effectiveFrom,
+  effectiveTo: value.effectiveTo,
+  createdByTransactionId: value.createdByTransactionId,
+  createdAt: value.createdAt,
+});
+
+const mapPolicyRiskDraft = (value: PolicyRiskDraft): PolicyRiskDraftRecord => ({
+  id: value.id,
+  policyId: value.policyId,
+  transactionId: value.transactionId,
+  riskType: value.riskType,
+  riskKey: value.riskKey,
+  attributes: asJsonObject(value.attributes),
+  createdAt: value.createdAt,
+});
+
+const mapPolicyCoverageDraft = (value: PolicyCoverageDraft): PolicyCoverageDraftRecord => ({
+  id: value.id,
+  policyId: value.policyId,
+  transactionId: value.transactionId,
+  coverageCode: value.coverageCode,
+  appliesToRiskKey: value.appliesToRiskKey,
+  attributes: asJsonObject(value.attributes),
+  createdAt: value.createdAt,
+});
+
+const mapCoverageTermDraft = (value: CoverageTermDraft): CoverageTermDraftRecord => ({
+  id: value.id,
+  policyId: value.policyId,
+  transactionId: value.transactionId,
+  policyCoverageDraftId: value.policyCoverageDraftId,
+  termCode: value.termCode,
+  valueType: value.valueType,
+  moneyAmount: value.moneyAmount?.toFixed(2) ?? null,
+  moneyCurrency: value.moneyCurrency,
+  numberValue: value.numberValue?.toFixed(4) ?? null,
+  stringValue: value.stringValue,
+  booleanValue: value.booleanValue,
+  createdAt: value.createdAt,
+});
+
+const coverageRef = (coverageCode: string, appliesToRiskKey: string | null): string =>
+  `${coverageCode}::${appliesToRiskKey ?? ""}`;
 
 export class PrismaPolicyRepository implements PolicyRepository {
   public constructor(private readonly prisma: PrismaClient) {}
 
-  public async createPolicyDraft(input: { policyNumber: string }): Promise<PolicyRecord> {
-    const created = await this.prisma.policy.create({ data: { policyNumber: input.policyNumber } });
+  public async createPolicy(input: {
+    policyNumber: string;
+    productId: string;
+    productVersionId: string;
+  }): Promise<PolicyRecord> {
+    const created = await this.prisma.policy.create({
+      data: {
+        policyNumber: input.policyNumber,
+        productId: input.productId,
+        productVersionId: input.productVersionId,
+      },
+    });
     return mapPolicy(created);
   }
 
-  public async getPolicyById(policyId: string): Promise<PolicyRecord | null> {
-    const policy = await this.prisma.policy.findUnique({ where: { id: policyId } });
-    return policy ? mapPolicy(policy) : null;
+  public async listPolicies(query?: string): Promise<ReadonlyArray<PolicyRecord>> {
+    const where = query
+      ? {
+          OR: [
+            { id: { contains: query, mode: "insensitive" as const } },
+            { policyNumber: { contains: query, mode: "insensitive" as const } },
+          ],
+        }
+      : undefined;
+    const rows = await this.prisma.policy.findMany({
+      ...(where ? { where } : {}),
+      orderBy: { createdAt: "desc" },
+    });
+    return rows.map((row) => mapPolicy(row));
   }
 
-  public async updatePolicyStatus(policyId: string, status: "DRAFT" | "ACTIVE"): Promise<PolicyRecord> {
-    const updated = await this.prisma.policy.update({ where: { id: policyId }, data: { status } });
-    return mapPolicy(updated);
+  public async getPolicyById(policyId: string): Promise<PolicyRecord | null> {
+    const row = await this.prisma.policy.findUnique({ where: { id: policyId } });
+    return row ? mapPolicy(row) : null;
+  }
+
+  public async updatePolicyStatus(policyId: string, status: PolicyRecord["status"]): Promise<PolicyRecord> {
+    const row = await this.prisma.policy.update({ where: { id: policyId }, data: { status } });
+    return mapPolicy(row);
+  }
+
+  public async createPolicyTerm(input: {
+    policyId: string;
+    termStart: Date;
+    termEnd: Date;
+    status: PolicyTermRecord["status"];
+  }): Promise<PolicyTermRecord> {
+    const row = await this.prisma.policyTerm.create({
+      data: {
+        policyId: input.policyId,
+        termStart: input.termStart,
+        termEnd: input.termEnd,
+        status: input.status,
+      },
+    });
+    return mapPolicyTerm(row);
+  }
+
+  public async updatePolicyTermStatus(
+    termId: string,
+    status: PolicyTermRecord["status"],
+  ): Promise<PolicyTermRecord> {
+    const row = await this.prisma.policyTerm.update({ where: { id: termId }, data: { status } });
+    return mapPolicyTerm(row);
+  }
+
+  public async getPolicyTermById(termId: string): Promise<PolicyTermRecord | null> {
+    const row = await this.prisma.policyTerm.findUnique({ where: { id: termId } });
+    return row ? mapPolicyTerm(row) : null;
+  }
+
+  public async getLatestPolicyTerm(policyId: string): Promise<PolicyTermRecord | null> {
+    const row = await this.prisma.policyTerm.findFirst({
+      where: { policyId },
+      orderBy: [{ createdAt: "desc" }],
+    });
+    return row ? mapPolicyTerm(row) : null;
   }
 
   public async createPolicyTransaction(input: {
     policyId: string;
-    policyTermId: string | null;
-    transactionNumber: number;
-    transactionType: "NEW_BUSINESS" | "ENDORSEMENT";
-    effectiveFrom: Date;
-    effectiveTo: Date;
-    productVersionId: string;
-    draftPayload: JsonObject;
+    termId: string;
+    type: "NEW_BUSINESS" | "ENDORSEMENT";
+    effectiveAt: Date;
+    requestId: string | null;
+    idempotencyKey: string | null;
   }): Promise<PolicyTransactionRecord> {
-    const created = await this.prisma.policyTransaction.create({
+    const row = await this.prisma.policyTransaction.create({
       data: {
         policyId: input.policyId,
-        policyTermId: input.policyTermId,
-        transactionNumber: input.transactionNumber,
-        transactionType: input.transactionType,
-        effectiveFrom: input.effectiveFrom,
-        effectiveTo: input.effectiveTo,
-        productVersionId: input.productVersionId,
-        draftPayload: toInputJson(input.draftPayload),
+        termId: input.termId,
+        type: input.type,
+        effectiveAt: input.effectiveAt,
+        requestId: input.requestId,
+        idempotencyKey: input.idempotencyKey,
       },
     });
-    return mapTx(created);
+    return mapPolicyTransaction(row);
+  }
+
+  public async listPolicyTransactions(policyId: string): Promise<ReadonlyArray<PolicyTransactionRecord>> {
+    const rows = await this.prisma.policyTransaction.findMany({
+      where: { policyId },
+      orderBy: { createdAt: "desc" },
+    });
+    return rows.map((row) => mapPolicyTransaction(row));
   }
 
   public async getPolicyTransactionById(transactionId: string): Promise<PolicyTransactionRecord | null> {
-    const tx = await this.prisma.policyTransaction.findUnique({ where: { id: transactionId } });
-    return tx ? mapTx(tx) : null;
-  }
-
-  public async getNextTransactionNumber(policyId: string): Promise<number> {
-    const latest = await this.prisma.policyTransaction.findFirst({
-      where: { policyId },
-      orderBy: { transactionNumber: "desc" },
-    });
-    return latest ? latest.transactionNumber + 1 : 1;
-  }
-
-  public async updateTransactionDraftPayload(
-    transactionId: string,
-    draftPayload: JsonObject,
-  ): Promise<PolicyTransactionRecord> {
-    const updated = await this.prisma.policyTransaction.update({
-      where: { id: transactionId },
-      data: { draftPayload: toInputJson(draftPayload) },
-    });
-    return mapTx(updated);
-  }
-
-  public async setTransactionRating(input: {
-    transactionId: string;
-    pricingProgramVersionId: string | null;
-    requestJson: JsonObject;
-    responseJson: JsonObject;
-  }): Promise<PolicyTransactionRecord> {
-    const updated = await this.prisma.policyTransaction.update({
-      where: { id: input.transactionId },
-      data: {
-        pricingProgramVersionId: input.pricingProgramVersionId,
-        ratingRequestJson: toInputJson(input.requestJson),
-        ratingResponseJson: toInputJson(input.responseJson),
-        ratedAt: new Date(),
-      },
-    });
-    return mapTx(updated);
+    const row = await this.prisma.policyTransaction.findUnique({ where: { id: transactionId } });
+    return row ? mapPolicyTransaction(row) : null;
   }
 
   public async commitPolicyTransaction(
     transactionId: string,
     committedAt: Date,
   ): Promise<PolicyTransactionRecord> {
-    const updated = await this.prisma.policyTransaction.update({
+    const row = await this.prisma.policyTransaction.update({
       where: { id: transactionId },
-      data: {
-        status: "COMMITTED",
-        committedAt,
-      },
+      data: { status: "COMMITTED", committedAt },
     });
-    return mapTx(updated);
+    return mapPolicyTransaction(row);
   }
 
-  public async createPolicyTerm(input: {
+  public async replaceRiskDrafts(input: {
     policyId: string;
-    termNumber: number;
-    effectiveFrom: Date;
-    effectiveTo: Date;
-  }): Promise<PolicyTermRecord> {
-    const created = await this.prisma.policyTerm.create({
-      data: {
-        policyId: input.policyId,
-        termNumber: input.termNumber,
-        effectiveFrom: input.effectiveFrom,
-        effectiveTo: input.effectiveTo,
-      },
-    });
-    return mapTerm(created);
-  }
-
-  public async getLatestPolicyTerm(policyId: string): Promise<PolicyTermRecord | null> {
-    const term = await this.prisma.policyTerm.findFirst({
-      where: { policyId },
-      orderBy: { termNumber: "desc" },
-    });
-    return term ? mapTerm(term) : null;
-  }
-
-  public async closeExposureRecords(policyId: string, keys: ReadonlyArray<string>, effectiveTo: Date): Promise<void> {
-    if (keys.length === 0) {
-      return;
-    }
-    await this.prisma.policyExposureRecord.updateMany({
-      where: {
-        policyId,
-        exposureKey: { in: [...keys] },
-        effectiveTo: { gt: effectiveTo },
-        effectiveFrom: { lt: effectiveTo },
-      },
-      data: { effectiveTo },
-    });
-  }
-
-  public async closeCoverageRecords(policyId: string, keys: ReadonlyArray<string>, effectiveTo: Date): Promise<void> {
-    if (keys.length === 0) {
-      return;
-    }
-    await this.prisma.policyCoverageRecord.updateMany({
-      where: {
-        policyId,
-        coverageKey: { in: [...keys] },
-        effectiveTo: { gt: effectiveTo },
-        effectiveFrom: { lt: effectiveTo },
-      },
-      data: { effectiveTo },
-    });
-  }
-
-  public async createExposureRecords(input: {
-    policyId: string;
-    policyTermId: string;
-    policyTransactionId: string;
-    effectiveFrom: Date;
-    effectiveTo: Date;
-    exposures: ReadonlyArray<{ exposureKey: string; data: JsonObject }>;
+    transactionId: string;
+    risks: ReadonlyArray<{
+      riskType: "VEHICLE" | "PROPERTY" | "LOCATION" | "PERSON" | "OTHER";
+      riskKey: string | null;
+      attributes: JsonObject;
+    }>;
   }): Promise<void> {
-    if (input.exposures.length === 0) {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.policyRiskDraft.deleteMany({ where: { transactionId: input.transactionId } });
+      if (input.risks.length > 0) {
+        await tx.policyRiskDraft.createMany({
+          data: input.risks.map((risk) => ({
+            policyId: input.policyId,
+            transactionId: input.transactionId,
+            riskType: risk.riskType,
+            riskKey: risk.riskKey,
+            attributes: toInputJson(risk.attributes),
+          })),
+        });
+      }
+    });
+  }
+
+  public async listRiskDrafts(transactionId: string): Promise<ReadonlyArray<PolicyRiskDraftRecord>> {
+    const rows = await this.prisma.policyRiskDraft.findMany({
+      where: { transactionId },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
+    return rows.map((row) => mapPolicyRiskDraft(row));
+  }
+
+  public async replaceCoverageDrafts(input: {
+    policyId: string;
+    transactionId: string;
+    coverages: ReadonlyArray<{
+      coverageCode: string;
+      appliesToRiskKey: string | null;
+      attributes: JsonObject;
+    }>;
+  }): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.coverageTermDraft.deleteMany({ where: { transactionId: input.transactionId } });
+      await tx.policyCoverageDraft.deleteMany({ where: { transactionId: input.transactionId } });
+      if (input.coverages.length > 0) {
+        await tx.policyCoverageDraft.createMany({
+          data: input.coverages.map((coverage) => ({
+            policyId: input.policyId,
+            transactionId: input.transactionId,
+            coverageCode: coverage.coverageCode,
+            appliesToRiskKey: coverage.appliesToRiskKey,
+            attributes: toInputJson(coverage.attributes),
+          })),
+        });
+      }
+    });
+  }
+
+  public async listCoverageDrafts(transactionId: string): Promise<ReadonlyArray<PolicyCoverageDraftRecord>> {
+    const rows = await this.prisma.policyCoverageDraft.findMany({
+      where: { transactionId },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
+    return rows.map((row) => mapPolicyCoverageDraft(row));
+  }
+
+  public async replaceCoverageTermDrafts(input: {
+    policyId: string;
+    transactionId: string;
+    terms: ReadonlyArray<{
+      coverageCode: string;
+      appliesToRiskKey: string | null;
+      termCode: string;
+      valueType: "MONEY" | "NUMBER" | "STRING" | "BOOLEAN";
+      moneyAmount: string | null;
+      moneyCurrency: string | null;
+      numberValue: string | null;
+      stringValue: string | null;
+      booleanValue: boolean | null;
+    }>;
+  }): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.coverageTermDraft.deleteMany({ where: { transactionId: input.transactionId } });
+      if (input.terms.length === 0) {
+        return;
+      }
+
+      const coverageDrafts = await tx.policyCoverageDraft.findMany({
+        where: { transactionId: input.transactionId },
+      });
+      const coverageByRef = new Map<string, PolicyCoverageDraft>();
+      for (const draft of coverageDrafts) {
+        coverageByRef.set(coverageRef(draft.coverageCode, draft.appliesToRiskKey), draft);
+      }
+
+      await tx.coverageTermDraft.createMany({
+        data: input.terms.map((term) => {
+          const coverageDraft = coverageByRef.get(coverageRef(term.coverageCode, term.appliesToRiskKey));
+          if (!coverageDraft) {
+            throw new Error(`Missing draft coverage for ${term.coverageCode}`);
+          }
+          return {
+            policyId: input.policyId,
+            transactionId: input.transactionId,
+            policyCoverageDraftId: coverageDraft.id,
+            termCode: term.termCode,
+            valueType: term.valueType,
+            moneyAmount: term.moneyAmount ? new PrismaNamespace.Decimal(term.moneyAmount) : null,
+            moneyCurrency: term.moneyCurrency,
+            numberValue: term.numberValue ? new PrismaNamespace.Decimal(term.numberValue) : null,
+            stringValue: term.stringValue,
+            booleanValue: term.booleanValue,
+          };
+        }),
+      });
+    });
+  }
+
+  public async listCoverageTermDrafts(transactionId: string): Promise<ReadonlyArray<CoverageTermDraftRecord>> {
+    const rows = await this.prisma.coverageTermDraft.findMany({
+      where: { transactionId },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
+    return rows.map((row) => mapCoverageTermDraft(row));
+  }
+
+  public async closeActiveRisks(policyId: string, effectiveAt: Date): Promise<void> {
+    await this.prisma.policyRisk.updateMany({
+      where: {
+        policyId,
+        effectiveFrom: { lt: effectiveAt },
+        effectiveTo: { gt: effectiveAt },
+      },
+      data: { effectiveTo: effectiveAt },
+    });
+  }
+
+  public async closeActiveCoverages(policyId: string, effectiveAt: Date): Promise<void> {
+    await this.prisma.policyCoverage.updateMany({
+      where: {
+        policyId,
+        effectiveFrom: { lt: effectiveAt },
+        effectiveTo: { gt: effectiveAt },
+      },
+      data: { effectiveTo: effectiveAt },
+    });
+  }
+
+  public async closeActiveCoverageTerms(policyId: string, effectiveAt: Date): Promise<void> {
+    await this.prisma.coverageTerm.updateMany({
+      where: {
+        policyCoverage: { policyId },
+        effectiveFrom: { lt: effectiveAt },
+        effectiveTo: { gt: effectiveAt },
+      },
+      data: { effectiveTo: effectiveAt },
+    });
+  }
+
+  public async closeActivePremiums(policyId: string, effectiveAt: Date): Promise<void> {
+    await this.prisma.policyPremium.updateMany({
+      where: {
+        policyId,
+        effectiveFrom: { lt: effectiveAt },
+        effectiveTo: { gt: effectiveAt },
+      },
+      data: { effectiveTo: effectiveAt },
+    });
+  }
+
+  public async createPolicyRisks(input: {
+    policyId: string;
+    termId: string;
+    createdByTransactionId: string;
+    effectiveFrom: Date;
+    effectiveTo: Date;
+    risks: ReadonlyArray<{
+      riskType: "VEHICLE" | "PROPERTY" | "LOCATION" | "PERSON" | "OTHER";
+      riskKey: string | null;
+      attributes: JsonObject;
+    }>;
+  }): Promise<ReadonlyArray<PolicyRiskRecord>> {
+    const created = await Promise.all(
+      input.risks.map((risk) =>
+        this.prisma.policyRisk.create({
+          data: {
+            policyId: input.policyId,
+            termId: input.termId,
+            riskType: risk.riskType,
+            riskKey: risk.riskKey,
+            attributes: toInputJson(risk.attributes),
+            effectiveFrom: input.effectiveFrom,
+            effectiveTo: input.effectiveTo,
+            createdByTransactionId: input.createdByTransactionId,
+          },
+        }),
+      ),
+    );
+
+    return created.map((row) => mapPolicyRisk(row));
+  }
+
+  public async createPolicyCoverages(input: {
+    policyId: string;
+    termId: string;
+    createdByTransactionId: string;
+    effectiveFrom: Date;
+    effectiveTo: Date;
+    coverages: ReadonlyArray<{
+      coverageCode: string;
+      appliesToRiskId: string | null;
+      attributes: JsonObject;
+    }>;
+  }): Promise<ReadonlyArray<PolicyCoverageRecord>> {
+    const created = await Promise.all(
+      input.coverages.map((coverage) =>
+        this.prisma.policyCoverage.create({
+          data: {
+            policyId: input.policyId,
+            termId: input.termId,
+            coverageCode: coverage.coverageCode,
+            appliesToRiskId: coverage.appliesToRiskId,
+            attributes: toInputJson(coverage.attributes),
+            effectiveFrom: input.effectiveFrom,
+            effectiveTo: input.effectiveTo,
+            createdByTransactionId: input.createdByTransactionId,
+          },
+        }),
+      ),
+    );
+
+    return created.map((row) => mapPolicyCoverage(row));
+  }
+
+  public async createCoverageTerms(input: {
+    createdByTransactionId: string;
+    effectiveFrom: Date;
+    effectiveTo: Date;
+    terms: ReadonlyArray<{
+      policyCoverageId: string;
+      termCode: string;
+      valueType: "MONEY" | "NUMBER" | "STRING" | "BOOLEAN";
+      moneyAmount: string | null;
+      moneyCurrency: string | null;
+      numberValue: string | null;
+      stringValue: string | null;
+      booleanValue: boolean | null;
+    }>;
+  }): Promise<void> {
+    if (input.terms.length === 0) {
       return;
     }
-    await this.prisma.policyExposureRecord.createMany({
-      data: input.exposures.map((item) => ({
-        policyId: input.policyId,
-        policyTermId: input.policyTermId,
-        policyTransactionId: input.policyTransactionId,
-        exposureKey: item.exposureKey,
-        data: toInputJson(item.data),
+
+    await this.prisma.coverageTerm.createMany({
+      data: input.terms.map((term) => ({
+        policyCoverageId: term.policyCoverageId,
+        termCode: term.termCode,
+        valueType: term.valueType,
+        moneyAmount: term.moneyAmount ? new PrismaNamespace.Decimal(term.moneyAmount) : null,
+        moneyCurrency: term.moneyCurrency,
+        numberValue: term.numberValue ? new PrismaNamespace.Decimal(term.numberValue) : null,
+        stringValue: term.stringValue,
+        booleanValue: term.booleanValue,
         effectiveFrom: input.effectiveFrom,
         effectiveTo: input.effectiveTo,
+        createdByTransactionId: input.createdByTransactionId,
       })),
     });
   }
 
-  public async createCoverageRecords(input: {
-    policyId: string;
-    policyTermId: string;
-    policyTransactionId: string;
-    effectiveFrom: Date;
-    effectiveTo: Date;
-    coverages: ReadonlyArray<{ coverageKey: string; data: JsonObject }>;
+  public async getAsOfRisks(policyId: string, asOf: Date): Promise<ReadonlyArray<PolicyRiskRecord>> {
+    const rows = await this.prisma.policyRisk.findMany({
+      where: {
+        policyId,
+        effectiveFrom: { lte: asOf },
+        effectiveTo: { gt: asOf },
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
+    return rows.map((row) => mapPolicyRisk(row));
+  }
+
+  public async getAsOfCoverages(policyId: string, asOf: Date): Promise<ReadonlyArray<PolicyCoverageRecord>> {
+    const rows = await this.prisma.policyCoverage.findMany({
+      where: {
+        policyId,
+        effectiveFrom: { lte: asOf },
+        effectiveTo: { gt: asOf },
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
+    return rows.map((row) => mapPolicyCoverage(row));
+  }
+
+  public async getAsOfCoverageTermsByCoverageIds(
+    coverageIds: ReadonlyArray<string>,
+    asOf: Date,
+  ): Promise<ReadonlyArray<CoverageTermRecord>> {
+    if (coverageIds.length === 0) {
+      return [];
+    }
+    const rows = await this.prisma.coverageTerm.findMany({
+      where: {
+        policyCoverageId: { in: [...coverageIds] },
+        effectiveFrom: { lte: asOf },
+        effectiveTo: { gt: asOf },
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
+    return rows.map((row) => mapCoverageTerm(row));
+  }
+
+  public async getAsOfPremiums(policyId: string, asOf: Date): Promise<ReadonlyArray<PolicyPremiumRecord>> {
+    const rows = await this.prisma.policyPremium.findMany({
+      where: {
+        policyId,
+        effectiveFrom: { lte: asOf },
+        effectiveTo: { gt: asOf },
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
+    return rows.map((row) => mapPolicyPremium(row));
+  }
+
+  public async getIdempotency(scope: string, key: string): Promise<JsonObject | null> {
+    const row: PolicyIdempotencyKey | null = await this.prisma.policyIdempotencyKey.findUnique({
+      where: { commandScope_idempotencyKey: { commandScope: scope, idempotencyKey: key } },
+    });
+    return row ? asJsonObject(row.responseJson) : null;
+  }
+
+  public async saveIdempotency(input: {
+    policyId: string | null;
+    scope: string;
+    key: string;
+    responseJson: JsonObject;
   }): Promise<void> {
-    if (input.coverages.length === 0) {
-      return;
-    }
-    await this.prisma.policyCoverageRecord.createMany({
-      data: input.coverages.map((item) => ({
+    await this.prisma.policyIdempotencyKey.create({
+      data: {
         policyId: input.policyId,
-        policyTermId: input.policyTermId,
-        policyTransactionId: input.policyTransactionId,
-        coverageKey: item.coverageKey,
-        data: toInputJson(item.data),
-        effectiveFrom: input.effectiveFrom,
-        effectiveTo: input.effectiveTo,
-      })),
-    });
-  }
-
-  public async getAsOfExposureRecords(
-    policyId: string,
-    asOfDate: Date,
-  ): Promise<ReadonlyArray<PolicyExposureRecordModel>> {
-    const rows = await this.prisma.policyExposureRecord.findMany({
-      where: {
-        policyId,
-        effectiveFrom: { lte: asOfDate },
-        effectiveTo: { gt: asOfDate },
+        commandScope: input.scope,
+        idempotencyKey: input.key,
+        responseJson: toInputJson(input.responseJson),
       },
-      orderBy: [{ exposureKey: "asc" }, { createdAt: "desc" }],
     });
-
-    const latestByKey = new Map<string, PolicyExposureRecord>();
-    for (const row of rows) {
-      if (!latestByKey.has(row.exposureKey)) {
-        latestByKey.set(row.exposureKey, row);
-      }
-    }
-    return [...latestByKey.values()].map((row) => mapExposure(row));
-  }
-
-  public async getAsOfCoverageRecords(
-    policyId: string,
-    asOfDate: Date,
-  ): Promise<ReadonlyArray<PolicyCoverageRecordModel>> {
-    const rows = await this.prisma.policyCoverageRecord.findMany({
-      where: {
-        policyId,
-        effectiveFrom: { lte: asOfDate },
-        effectiveTo: { gt: asOfDate },
-      },
-      orderBy: [{ coverageKey: "asc" }, { createdAt: "desc" }],
-    });
-
-    const latestByKey = new Map<string, PolicyCoverageRecord>();
-    for (const row of rows) {
-      if (!latestByKey.has(row.coverageKey)) {
-        latestByKey.set(row.coverageKey, row);
-      }
-    }
-    return [...latestByKey.values()].map((row) => mapCoverage(row));
   }
 }

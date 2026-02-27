@@ -5,6 +5,7 @@ set -o pipefail
 
 BASE_URL="${CORE_API_BASE_URL:-http://127.0.0.1:4000}"
 AUTH_TOKEN="${CORE_API_AUTH_TOKEN:-}"
+JWT_SECRET="${JWT_SECRET:-unsafe-dev-secret}"
 
 require_cmd() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -15,6 +16,7 @@ require_cmd() {
 
 require_cmd curl
 require_cmd jq
+require_cmd node
 require_cmd python3
 
 LAST_STATUS=""
@@ -34,16 +36,45 @@ print_body() {
   fi
 }
 
+generate_dev_jwt() {
+  local secret="$1"
+  node - "$secret" <<'NODE'
+const crypto = require("node:crypto");
+const secret = process.argv[2] ?? "unsafe-dev-secret";
+const now = Math.floor(Date.now() / 1000);
+const header = { alg: "HS256", typ: "JWT" };
+const payload = {
+  sub: "manual-policy-check",
+  scope: "policy:write policy:read",
+  iat: now,
+  exp: now + 3600,
+};
+
+const base64url = (obj) => Buffer.from(JSON.stringify(obj)).toString("base64url");
+const encodedHeader = base64url(header);
+const encodedPayload = base64url(payload);
+const data = `${encodedHeader}.${encodedPayload}`;
+const signature = crypto.createHmac("sha256", secret).update(data).digest("base64url");
+process.stdout.write(`${data}.${signature}`);
+NODE
+}
+
 call_api() {
   local method="$1"
   local path="$2"
-  local data="${3:-}"
-  local url="${BASE_URL}${path}"
+  local data="$3"
+  shift 3
 
+  local url="${BASE_URL}${path}"
   local headers=("-H" "Accept: application/json")
+
   if [[ -n "$AUTH_TOKEN" ]]; then
     headers+=("-H" "Authorization: Bearer ${AUTH_TOKEN}")
   fi
+
+  for header in "$@"; do
+    headers+=("-H" "$header")
+  done
 
   local response
   if [[ -n "$data" ]]; then
@@ -78,6 +109,10 @@ require_nonempty() {
   fi
 }
 
+uuid() {
+  node -e 'console.log(require("node:crypto").randomUUID())'
+}
+
 iso_from_offset_days() {
   local days="$1"
   python3 - "$days" <<'PY'
@@ -89,6 +124,13 @@ print((datetime.now(timezone.utc) + timedelta(days=days)).strftime('%Y-%m-%dT%H:
 PY
 }
 
+if [[ -z "$AUTH_TOKEN" ]]; then
+  AUTH_TOKEN="$(generate_dev_jwt "$JWT_SECRET")"
+  echo "Using generated dev JWT (JWT_SECRET=${JWT_SECRET})."
+else
+  echo "Using CORE_API_AUTH_TOKEN from environment."
+fi
+
 unique_suffix="$(date +%s)"
 product_code="POLICY-PROD-${unique_suffix}"
 component_code="POLICY-COMP-${unique_suffix}"
@@ -98,9 +140,15 @@ pricing_program_file="/tmp/core-api-policy-pricing-${unique_suffix}.py"
 
 term_start="$(iso_from_offset_days 0)"
 term_end="$(iso_from_offset_days 365)"
-endorsement_effective_from="$(iso_from_offset_days 30)"
+endorsement_effective_at="$(iso_from_offset_days 30)"
 snapshot_as_of_initial="$(iso_from_offset_days 1)"
 snapshot_as_of_endorsement="$(iso_from_offset_days 45)"
+
+create_policy_idempotency="policy-create-${unique_suffix}"
+new_business_idempotency="policy-nb-${unique_suffix}"
+new_business_commit_idempotency="policy-nb-commit-${unique_suffix}"
+endorsement_idempotency="policy-endorsement-${unique_suffix}"
+endorsement_commit_idempotency="policy-endorsement-commit-${unique_suffix}"
 
 cat > "$pricing_program_file" <<'PY'
 #!/usr/bin/env python3
@@ -140,9 +188,9 @@ trap 'rm -f "$pricing_program_file"' EXIT
 printf "Core API policy-domain manual check script\n"
 printf "Base URL: %s\n" "$BASE_URL"
 
-call_api "GET" "/health"
+call_api "GET" "/health" ""
 
-# --- Minimal product/pricing setup so policy/rating endpoints can run ---
+# --- Minimal product/pricing setup so policy endpoints can run ---
 call_api "POST" "/v1/product-management/products" "$(cat <<JSON
 {
   "productCode": "${product_code}",
@@ -244,29 +292,45 @@ call_api "POST" "/v1/product-management/product-versions/${product_version_id}/c
 JSON
 )"
 
-call_api "POST" "/v1/product-management/product-versions/${product_version_id}/activate"
+call_api "POST" "/v1/product-management/product-versions/${product_version_id}/activate" ""
 
 # --- Policy domain endpoints ---
-call_api "POST" "/v1/policies/drafts" "$(cat <<JSON
+call_api "POST" "/v1/policies" "$(cat <<JSON
 {
   "policyNumber": "${policy_number}",
+  "productId": "${product_id}",
   "productVersionId": "${product_version_id}",
-  "effectiveFrom": "${term_start}",
-  "effectiveTo": "${term_end}"
+  "termStart": "${term_start}",
+  "termEnd": "${term_end}"
 }
 JSON
-)"
-policy_id="$(extract_field "$LAST_BODY" '.policyId')"
-nb_tx_id="$(extract_field "$LAST_BODY" '.transactionId')"
+)" "Idempotency-Key: ${create_policy_idempotency}"
+policy_id="$(extract_field "$LAST_BODY" '.id')"
 require_nonempty "$policy_id" "policy_id"
-require_nonempty "$nb_tx_id" "new_business_transaction_id"
 
-call_api "PUT" "/v1/policy-transactions/${nb_tx_id}/exposures" "$(cat <<JSON
+call_api "GET" "/v1/policies" ""
+call_api "GET" "/v1/policies?query=${policy_number}" ""
+call_api "GET" "/v1/policies/${policy_id}" ""
+
+call_api "POST" "/v1/policies/${policy_id}/transactions/new-business" "$(cat <<JSON
 {
-  "exposures": [
+  "effectiveAt": "${term_start}"
+}
+JSON
+)" "Idempotency-Key: ${new_business_idempotency}"
+new_business_tx_id="$(extract_field "$LAST_BODY" '.id')"
+require_nonempty "$new_business_tx_id" "new_business_tx_id"
+
+call_api "GET" "/v1/policies/${policy_id}/transactions" ""
+call_api "GET" "/v1/policy-transactions/${new_business_tx_id}" ""
+
+call_api "PUT" "/v1/policy-transactions/${new_business_tx_id}/risks" "$(cat <<JSON
+{
+  "risks": [
     {
-      "exposureKey": "vehicle-1",
-      "data": {
+      "riskType": "VEHICLE",
+      "riskKey": "vehicle-1",
+      "attributes": {
         "vin": "VIN-${unique_suffix}",
         "year": 2024
       }
@@ -276,12 +340,13 @@ call_api "PUT" "/v1/policy-transactions/${nb_tx_id}/exposures" "$(cat <<JSON
 JSON
 )"
 
-call_api "PUT" "/v1/policy-transactions/${nb_tx_id}/coverages" "$(cat <<JSON
+call_api "PUT" "/v1/policy-transactions/${new_business_tx_id}/coverages" "$(cat <<JSON
 {
   "coverages": [
     {
-      "coverageKey": "liability",
-      "data": {
+      "coverageCode": "LIABILITY",
+      "appliesToRiskKey": "vehicle-1",
+      "attributes": {
         "limit": 100000
       }
     }
@@ -290,35 +355,52 @@ call_api "PUT" "/v1/policy-transactions/${nb_tx_id}/coverages" "$(cat <<JSON
 JSON
 )"
 
-call_api "POST" "/v1/policy-transactions/${nb_tx_id}/rate"
-call_api "POST" "/v1/policy-transactions/${nb_tx_id}/issue"
-
-call_api "GET" "/v1/policies/${policy_id}/snapshot?asOfDate=${snapshot_as_of_initial}"
-
-call_api "POST" "/v1/policies/${policy_id}/transactions/endorsement" "$(cat <<JSON
+call_api "PUT" "/v1/policy-transactions/${new_business_tx_id}/coverage-terms" "$(cat <<JSON
 {
-  "productVersionId": "${product_version_id}",
-  "effectiveFrom": "${endorsement_effective_from}"
+  "terms": [
+    {
+      "coverageCode": "LIABILITY",
+      "appliesToRiskKey": "vehicle-1",
+      "termCode": "DEDUCTIBLE",
+      "valueType": "MONEY",
+      "moneyAmount": "1000.00",
+      "moneyCurrency": "SEK"
+    }
+  ]
 }
 JSON
 )"
-endorsement_tx_id="$(extract_field "$LAST_BODY" '.transactionId')"
-require_nonempty "$endorsement_tx_id" "endorsement_transaction_id"
 
-call_api "PUT" "/v1/policy-transactions/${endorsement_tx_id}/exposures" "$(cat <<JSON
+call_api "POST" "/v1/policy-transactions/${new_business_tx_id}/validate" ""
+call_api "POST" "/v1/policy-transactions/${new_business_tx_id}/commit" "{}" "Idempotency-Key: ${new_business_commit_idempotency}"
+
+call_api "GET" "/v1/policies/${policy_id}/snapshot?asOf=${snapshot_as_of_initial}" ""
+
+call_api "POST" "/v1/policies/${policy_id}/transactions/endorsement" "$(cat <<JSON
 {
-  "exposures": [
+  "effectiveAt": "${endorsement_effective_at}"
+}
+JSON
+)" "Idempotency-Key: ${endorsement_idempotency}"
+endorsement_tx_id="$(extract_field "$LAST_BODY" '.id')"
+require_nonempty "$endorsement_tx_id" "endorsement_tx_id"
+
+call_api "PUT" "/v1/policy-transactions/${endorsement_tx_id}/risks" "$(cat <<JSON
+{
+  "risks": [
     {
-      "exposureKey": "vehicle-1",
-      "data": {
+      "riskType": "VEHICLE",
+      "riskKey": "vehicle-1",
+      "attributes": {
         "vin": "VIN-${unique_suffix}",
         "year": 2025,
         "updated": true
       }
     },
     {
-      "exposureKey": "driver-1",
-      "data": {
+      "riskType": "PERSON",
+      "riskKey": "driver-1",
+      "attributes": {
         "age": 31,
         "licensedYears": 12
       }
@@ -332,15 +414,17 @@ call_api "PUT" "/v1/policy-transactions/${endorsement_tx_id}/coverages" "$(cat <
 {
   "coverages": [
     {
-      "coverageKey": "liability",
-      "data": {
+      "coverageCode": "LIABILITY",
+      "appliesToRiskKey": "vehicle-1",
+      "attributes": {
         "limit": 200000
       }
     },
     {
-      "coverageKey": "collision",
-      "data": {
-        "deductible": 1000
+      "coverageCode": "DRIVER_ACCIDENT",
+      "appliesToRiskKey": "driver-1",
+      "attributes": {
+        "limit": 50000
       }
     }
   ]
@@ -348,10 +432,33 @@ call_api "PUT" "/v1/policy-transactions/${endorsement_tx_id}/coverages" "$(cat <
 JSON
 )"
 
-call_api "POST" "/v1/policy-transactions/${endorsement_tx_id}/rate"
-call_api "POST" "/v1/policy-transactions/${endorsement_tx_id}/issue"
+call_api "PUT" "/v1/policy-transactions/${endorsement_tx_id}/coverage-terms" "$(cat <<JSON
+{
+  "terms": [
+    {
+      "coverageCode": "LIABILITY",
+      "appliesToRiskKey": "vehicle-1",
+      "termCode": "DEDUCTIBLE",
+      "valueType": "MONEY",
+      "moneyAmount": "750.00",
+      "moneyCurrency": "SEK"
+    },
+    {
+      "coverageCode": "DRIVER_ACCIDENT",
+      "appliesToRiskKey": "driver-1",
+      "termCode": "MAX_EVENTS",
+      "valueType": "NUMBER",
+      "numberValue": "2"
+    }
+  ]
+}
+JSON
+)"
 
-call_api "GET" "/v1/policies/${policy_id}/snapshot?asOfDate=${snapshot_as_of_endorsement}"
+call_api "POST" "/v1/policy-transactions/${endorsement_tx_id}/validate" ""
+call_api "POST" "/v1/policy-transactions/${endorsement_tx_id}/commit" "{}" "Idempotency-Key: ${endorsement_commit_idempotency}"
+
+call_api "GET" "/v1/policies/${policy_id}/snapshot?asOf=${snapshot_as_of_endorsement}" ""
 
 echo ""
 echo "Policy-domain manual API check flow completed."

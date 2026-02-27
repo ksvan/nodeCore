@@ -182,3 +182,54 @@ do not guess
 implement minimal extensible solution
 
 follow architecture principles strictly
+
+
+## Code review instructions
+Here is a **short, Codex-focused Review Guidelines section** tailored for:
+
+**Node.js + Next.js + Fastify + Postgres**
+**Modularized monolith**
+
+---
+
+## Review Guidelines
+
+### Architecture
+
+* Respect module boundaries (no cross-module DB access).
+* Domain logic must not depend on Fastify/HTTP layer.
+* Keep modules independent and replaceable.
+
+### Policy rules
+
+* Never overwrite policy history (use versioning).
+* Distinguish clearly between **edit** (no new version) and **change** (new version).
+* Enforce valid state transitions (Draft → Quoted → Bound → Active → …).
+
+### API (Fastify)
+
+* Use explicit transaction endpoints (`/bind`, `/endorse`, `/cancel`), not generic PATCH for contract changes.
+* Validate all input schemas strictly.
+* Handlers must be thin; move logic to services/domain layer.
+
+### Database (Postgres)
+
+* Use transactions for all state-changing operations.
+* Enforce invariants with constraints (no overlapping effective periods).
+* Avoid business logic in controllers; keep it out of raw SQL where possible.
+
+### Idempotency & consistency
+
+* State-changing operations must be idempotent.
+* Use optimistic locking or version columns where relevant.
+
+### Testing
+
+* Unit test domain rules.
+* Integration test DB + transaction flows.
+* Cover edge cases around effective dates and versioning.
+
+### Observability
+
+* Log with: `policyNumber`, `version`, `transactionType`.
+* No PII in logs.
