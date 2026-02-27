@@ -4,7 +4,7 @@ This document contains the high level design spec of the system
 
 ## Intent
 
-The intent is to develop an property and casualty insurance core system in nodejs and nextjs. This is to be used conceptualy and for training. The solution should be feature complete, possible to use in insurance business process and have a customer facing frontend to login for service and sales purposes and user interfaces for insurance advisors and to make products, managing policies. Designwise it should be possible to scale it technically, allthough it will not be scaled up for this work. 
+The intent is to develop an property and casualty insurance core system in nodejs and nextjs. This is to be used conceptualy and for training. The solution should be feature complete, possible to use in insurance business process and have a customer facing frontend to login for service and sales purposes and user interfaces for insurance advisors and to make products, managing policies. Designwise it should be possible to scale it technically, allthough it will not be scaled up for this work.
 
 ## Scope to cover
 
@@ -13,7 +13,7 @@ An insurance core system have very many parts. In the defition used here, the co
 Businesswise, the solution should cover both Commercial and private insurance. For this setup, we will have the basic selection of products. Vehicle, house, content, health, travel.
 We do not intend to ever cover life and pension.
 
-We will not cover claims processes or claims frontends. But the system should provide related APIS for this to be realized outside of the core. 
+We will not cover claims processes or claims frontends. But the system should provide related APIS for this to be realized outside of the core.
 
 We will not cover features for accounting, reporting or similar financial processes. Only the invoicing towards the customer. However, the system should provide APIs for an external accounting system to 1) get financial data from the core and 2) provide input to the core of paid invoices.
 
@@ -32,14 +32,16 @@ The setup will made so that it can run on a local machine. The tech stack will b
 
 The system should provide REST APIs where applicable, following best practises for this. When relevant, websockets should be used to provide event flows, using the same data object definitions as the REST APIs.
 
-The backend and frontend should be loosely coupled with well formed and re-usable APIS. It should be possible to utilize these from future frontend end or totally separate systems. 
+The backend and frontend should be loosely coupled with well formed and re-usable APIS. It should be possible to utilize these from future frontend end or totally separate systems.
 
 All APIs should be well documenteded. Keep a separate markup file for this purpose, keep it updated.
 
 All APIs should be idempotent, have a clear purpose and function. Do not make broad and multi-purpose APIs.
 
 ### Persistence layer
+
 PostgreSQL usage (MVP):
+
 - Use PostgreSQL with Prisma ORM.
 - Prisma schema is the source of truth; do not hand-write SQL except for rare seed/reference data scripts.
 - Use Prisma Migrate for schema changes.
@@ -54,6 +56,7 @@ PostgreSQL usage (MVP):
 - Backend must connect via PrismaClient and fail fast if DB is unavailable.
 
 ### General technical guidance
+
 Build the MVP as a modular monolith with strict domain boundaries. Version and publish all contracts (OpenAPI, WebSocket events, product/policy/pricing schemas). Use Postgres+Prisma with expand/contract migrations and an outbox pattern for event publishing. Enforce idempotency, correlation IDs, and structured logs/metrics from day one. Keep auth token/claims based (local auth now, OIDC later). Pricing runs as isolated versioned Python programs with strict JSON contracts and auditable request/response persistence.
 
 Policy and billing state SHALL be modeled using effective dating and transaction ledger patterns.
@@ -76,7 +79,7 @@ We make unit and functional testing av we go along. We use service mocking where
 
 Otherwise use common best practises.
 
-Assumptions made on the way should be documented as needed in a separate markdown file. 
+Assumptions made on the way should be documented as needed in a separate markdown file.
 
 Follow DDD with strict aggregate boundaries, API-first contracts, idempotent commands, versioned REST and WebSocket event schemas, effective-dated policy/billing state, full auditability, and security-by-default. Enforce CI quality gates (unit+integration+contract tests, lint/format, code review). Use structured logging with correlation IDs and maintain backward compatible contract evolution.
 
@@ -118,7 +121,7 @@ Quality gate:
 
 We use domain driven design to have a clearly and well defined structure in modules, services etc, all the way down to how we split code in files. We maintain a separat markup document briefly listing and explaining each domain and keep this up to date.
 
-As input for domains and information model, we use OMG Insurance model for property and casualty business. https://www.omg.org/spec/PC/1.0/About-PC
+As input for domains and information model, we use OMG Insurance model for property and casualty business. <https://www.omg.org/spec/PC/1.0/About-PC>
 
 The information model should be used also for API contracts, data model and data base design and similar, as a consistent red thread.
 

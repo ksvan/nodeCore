@@ -1,8 +1,9 @@
 # This file contains the more important info on policy design
-# both for UI and core layer
 
+both for UI and core layer
 
 ## Policy Edit (Administrative Update) / service
+
 Some operations are considered service or admin of the policy, without actually changing the contract.
 These things should always be fast, easy and available in both APIs and UI. Quite often calls on this.
 
@@ -30,6 +31,7 @@ Characteristics:
 ---
 
 ## Policy Change (Endorsement / New Version)
+
 This is typical when the customer wants to change coverage, exposure or similar affecting risk/price.
 Quite often because a change in vehicle or property, or a need to reduce price or increase coverage due to risk changes.
 
@@ -79,8 +81,9 @@ If not → It is a **Policy Edit**
 ---
 
 ## Policy States (Definitions) - Lifecycle
+
 The changes should happen automatically in the process. Default is draft when made initially.
-If offered to the customer, via an advisor or digitally, it should become Quoted etc, as laid out below. 
+If offered to the customer, via an advisor or digitally, it should become Quoted etc, as laid out below.
 
 **Draft**
 Policy is being created or edited. Not offered or legally binding.
@@ -105,7 +108,7 @@ Policy became inactive due to non-payment or failure to renew.
 
 ---
 
-# Policy Transactions (Version-creating events)
+## Policy Transactions (Version-creating events)
 
 **Create**
 Initial creation of a new policy.
