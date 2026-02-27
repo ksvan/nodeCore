@@ -15,3 +15,5 @@ ALTER TABLE "PricingRun" ALTER COLUMN "currency" SET NOT NULL;
 -- AlterTable
 ALTER TABLE "ProductVersion" ADD COLUMN     "allowedCurrencies" "CurrencyCode"[] DEFAULT ARRAY['SEK']::"CurrencyCode"[],
 ADD COLUMN     "defaultCurrency" "CurrencyCode" NOT NULL DEFAULT 'SEK';
+UPDATE "ProductVersion" SET "allowedCurrencies" = ARRAY["defaultCurrency"]::"CurrencyCode"[] WHERE "allowedCurrencies" IS NULL;
+ALTER TABLE "ProductVersion" ALTER COLUMN "allowedCurrencies" SET NOT NULL;
