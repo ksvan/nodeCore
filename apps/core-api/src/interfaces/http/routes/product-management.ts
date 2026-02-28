@@ -139,6 +139,52 @@ export const registerProductManagementRoutes = async (app: FastifyInstance): Pro
     }
   });
 
+  app.get("/v1/product-management/products/:productId/versions", async (request, reply) => {
+    const params = z.object({ productId: z.string().uuid() }).parse(request.params);
+    try {
+      const rows = await service.listProductVersions(params.productId);
+      return reply.send(rows);
+    } catch (error: unknown) {
+      sendError(reply, error);
+    }
+  });
+
+  app.get("/v1/product-management/product-versions/:productVersionId", async (request, reply) => {
+    const params = z.object({ productVersionId: z.string().uuid() }).parse(request.params);
+    try {
+      const row = await service.getProductVersion(params.productVersionId);
+      return reply.send(row);
+    } catch (error: unknown) {
+      sendError(reply, error);
+    }
+  });
+
+  app.get(
+    "/v1/product-management/product-versions/:productVersionId/components",
+    async (request, reply) => {
+      const params = z.object({ productVersionId: z.string().uuid() }).parse(request.params);
+      try {
+        const rows = await service.listProductVersionComponentRefs(params.productVersionId);
+        return reply.send(rows);
+      } catch (error: unknown) {
+        sendError(reply, error);
+      }
+    },
+  );
+
+  app.get(
+    "/v1/product-management/product-versions/:productVersionId/snapshot",
+    async (request, reply) => {
+      const params = z.object({ productVersionId: z.string().uuid() }).parse(request.params);
+      try {
+        const snapshot = await service.getProductVersionSnapshot(params.productVersionId);
+        return reply.send(snapshot);
+      } catch (error: unknown) {
+        sendError(reply, error);
+      }
+    },
+  );
+
   app.post("/v1/product-management/product-versions/:productVersionId/components", async (request, reply) => {
     const params = z.object({ productVersionId: z.string().uuid() }).parse(request.params);
     const body = z
@@ -227,6 +273,26 @@ export const registerProductManagementRoutes = async (app: FastifyInstance): Pro
     return reply.send(components);
   });
 
+  app.get("/v1/product-management/components/:componentId", async (request, reply) => {
+    const params = z.object({ componentId: z.string().uuid() }).parse(request.params);
+    try {
+      const row = await service.getComponent(params.componentId);
+      return reply.send(row);
+    } catch (error: unknown) {
+      sendError(reply, error);
+    }
+  });
+
+  app.get("/v1/product-management/components/:componentId/versions", async (request, reply) => {
+    const params = z.object({ componentId: z.string().uuid() }).parse(request.params);
+    try {
+      const rows = await service.listComponentVersions(params.componentId);
+      return reply.send(rows);
+    } catch (error: unknown) {
+      sendError(reply, error);
+    }
+  });
+
   app.post("/v1/product-management/components/:componentId/versions", async (request, reply) => {
     const params = z.object({ componentId: z.string().uuid() }).parse(request.params);
     const body = z
@@ -287,6 +353,37 @@ export const registerProductManagementRoutes = async (app: FastifyInstance): Pro
     });
     return reply.code(201).send(pricingProgram);
   });
+
+  app.get("/v1/product-management/pricing-programs", async (_request, reply) => {
+    const rows = await service.listPricingPrograms();
+    return reply.send(rows);
+  });
+
+  app.get(
+    "/v1/product-management/pricing-programs/:pricingProgramId",
+    async (request, reply) => {
+      const params = z.object({ pricingProgramId: z.string().uuid() }).parse(request.params);
+      try {
+        const row = await service.getPricingProgram(params.pricingProgramId);
+        return reply.send(row);
+      } catch (error: unknown) {
+        sendError(reply, error);
+      }
+    },
+  );
+
+  app.get(
+    "/v1/product-management/pricing-programs/:pricingProgramId/versions",
+    async (request, reply) => {
+      const params = z.object({ pricingProgramId: z.string().uuid() }).parse(request.params);
+      try {
+        const rows = await service.listPricingProgramVersions(params.pricingProgramId);
+        return reply.send(rows);
+      } catch (error: unknown) {
+        sendError(reply, error);
+      }
+    },
+  );
 
   app.post(
     "/v1/product-management/pricing-programs/:pricingProgramId/versions",

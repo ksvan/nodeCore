@@ -166,6 +166,16 @@ export class PrismaProductManagementRepository implements ProductManagementRepos
     return productVersion ? toProductVersionRecord(productVersion) : null;
   }
 
+  public async listProductVersionsByProductId(
+    productId: string,
+  ): Promise<ReadonlyArray<ProductVersionRecord>> {
+    const rows = await this.prisma.productVersion.findMany({
+      where: { productId },
+      orderBy: [{ version: "desc" }],
+    });
+    return rows.map((row) => toProductVersionRecord(row));
+  }
+
   public async getNextProductVersionNumber(productId: string): Promise<number> {
     const latest = await this.prisma.productVersion.findFirst({
       where: { productId },
@@ -297,6 +307,17 @@ export class PrismaProductManagementRepository implements ProductManagementRepos
     return component ? toComponentRecord(component) : null;
   }
 
+  public async listComponentVersionsByComponentId(
+    componentId: string,
+  ): Promise<ReadonlyArray<ComponentVersionRecord>> {
+    const rows = await this.prisma.componentVersion.findMany({
+      where: { componentId },
+      include: { component: true },
+      orderBy: [{ version: "desc" }],
+    });
+    return rows.map((row) => this.toComponentVersionRecord(row));
+  }
+
   public async createComponentVersion(input: {
     componentId: string;
     version: number;
@@ -368,6 +389,13 @@ export class PrismaProductManagementRepository implements ProductManagementRepos
     return toPricingProgramRecord(created);
   }
 
+  public async listPricingPrograms(): Promise<ReadonlyArray<PricingProgramRecord>> {
+    const rows = await this.prisma.pricingProgram.findMany({
+      orderBy: [{ createdAt: "desc" }],
+    });
+    return rows.map((row) => toPricingProgramRecord(row));
+  }
+
   public async getPricingProgramById(pricingProgramId: string): Promise<PricingProgramRecord | null> {
     const pricingProgram = await this.prisma.pricingProgram.findUnique({
       where: { id: pricingProgramId },
@@ -430,6 +458,17 @@ export class PrismaProductManagementRepository implements ProductManagementRepos
       include: { pricingProgram: true },
     });
     return version ? this.toPricingProgramVersionRecord(version) : null;
+  }
+
+  public async listPricingProgramVersionsByPricingProgramId(
+    pricingProgramId: string,
+  ): Promise<ReadonlyArray<PricingProgramVersionRecord>> {
+    const rows = await this.prisma.pricingProgramVersion.findMany({
+      where: { pricingProgramId },
+      include: { pricingProgram: true },
+      orderBy: [{ version: "desc" }],
+    });
+    return rows.map((row) => this.toPricingProgramVersionRecord(row));
   }
 
   private toProductVersionSnapshotRecord(snapshot: ProductVersionSnapshot): ProductVersionSnapshotRecord {

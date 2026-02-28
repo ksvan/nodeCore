@@ -126,6 +126,7 @@ export interface ProductManagementRepository {
     pricingProgramVersionId: string | null;
   }): Promise<ProductVersionRecord>;
   getProductVersionById(productVersionId: string): Promise<ProductVersionRecord | null>;
+  listProductVersionsByProductId(productId: string): Promise<ReadonlyArray<ProductVersionRecord>>;
   getNextProductVersionNumber(productId: string): Promise<number>;
   updateProductVersionStatus(
     productVersionId: string,
@@ -162,6 +163,9 @@ export interface ProductManagementRepository {
   }): Promise<ComponentRecord>;
   listComponents(type?: ComponentType): Promise<ReadonlyArray<ComponentRecord>>;
   getComponentById(componentId: string): Promise<ComponentRecord | null>;
+  listComponentVersionsByComponentId(
+    componentId: string,
+  ): Promise<ReadonlyArray<ComponentVersionRecord>>;
 
   createComponentVersion(input: {
     componentId: string;
@@ -183,6 +187,7 @@ export interface ProductManagementRepository {
     name: string;
     description: string | null;
   }): Promise<PricingProgramRecord>;
+  listPricingPrograms(): Promise<ReadonlyArray<PricingProgramRecord>>;
   getPricingProgramById(pricingProgramId: string): Promise<PricingProgramRecord | null>;
   createPricingProgramVersion(input: {
     pricingProgramId: string;
@@ -198,6 +203,9 @@ export interface ProductManagementRepository {
   getPricingProgramVersionById(
     pricingProgramVersionId: string,
   ): Promise<PricingProgramVersionRecord | null>;
+  listPricingProgramVersionsByPricingProgramId(
+    pricingProgramId: string,
+  ): Promise<ReadonlyArray<PricingProgramVersionRecord>>;
 }
 
 export interface DomainEventPublisher {

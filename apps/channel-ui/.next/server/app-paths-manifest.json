@@ -1,0 +1,18 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/auth/login/route": "app/api/auth/login/route.js",
+  "/api/auth/logout/route": "app/api/auth/logout/route.js",
+  "/api/core/[...path]/route": "app/api/core/[...path]/route.js",
+  "/login/page": "app/login/page.js",
+  "/page": "app/page.js",
+  "/logout/page": "app/logout/page.js",
+  "/(protected)/billing/page": "app/(protected)/billing/page.js",
+  "/(protected)/product-management/components/page": "app/(protected)/product-management/components/page.js",
+  "/(protected)/product-management/components/[componentId]/page": "app/(protected)/product-management/components/[componentId]/page.js",
+  "/(protected)/product-management/pricing-programs/[pricingProgramId]/page": "app/(protected)/product-management/pricing-programs/[pricingProgramId]/page.js",
+  "/(protected)/product-management/product-versions/[productVersionId]/page": "app/(protected)/product-management/product-versions/[productVersionId]/page.js",
+  "/(protected)/product-management/products/page": "app/(protected)/product-management/products/page.js",
+  "/(protected)/policy/page": "app/(protected)/policy/page.js",
+  "/(protected)/product-management/pricing-programs/page": "app/(protected)/product-management/pricing-programs/page.js",
+  "/(protected)/product-management/products/[productId]/page": "app/(protected)/product-management/products/[productId]/page.js"
+}

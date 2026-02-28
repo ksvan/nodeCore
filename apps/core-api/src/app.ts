@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import { registerAuthPlugin } from "./interfaces/http/plugins/auth.js";
+import { registerAuthRoutes } from "./interfaces/http/routes/auth.js";
 import { registerRequestLogging } from "./interfaces/http/plugins/request-logging.js";
 import { registerBillingRoutes } from "./interfaces/http/routes/billing.js";
 import { registerHealthRoute } from "./interfaces/http/routes/health.js";
@@ -20,6 +21,7 @@ export const buildApp = async () => {
   });
 
   await registerAuthPlugin(app);
+  await registerAuthRoutes(app);
   await registerRequestLogging(app);
   await registerEventsGateway(app);
   await registerHealthRoute(app);

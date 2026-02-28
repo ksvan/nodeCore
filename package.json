@@ -5,9 +5,13 @@
   "description": "nodeCore workspace",
   "scripts": {
     "dev:core-api": "pnpm --filter @nodecore/core-api dev",
+    "dev:channel-ui": "pnpm --filter @nodecore/channel-ui dev",
     "build:core-api": "pnpm --filter @nodecore/core-api build",
+    "build:channel-ui": "pnpm --filter @nodecore/channel-ui build",
     "lint:core-api": "pnpm --filter @nodecore/core-api lint",
-    "typecheck:core-api": "pnpm --filter @nodecore/core-api typecheck"
+    "lint:channel-ui": "pnpm --filter @nodecore/channel-ui lint",
+    "typecheck:core-api": "pnpm --filter @nodecore/core-api typecheck",
+    "typecheck:channel-ui": "pnpm --filter @nodecore/channel-ui typecheck"
   },
   "packageManager": "pnpm@10.30.2"
 }

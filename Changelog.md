@@ -11,15 +11,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 * Planned: Node-RED nodes for consuming WebSocket events and calling nodeCore APIs.
 * Planned: MCP interface for package metadata and API exposure to agents.
 * Planned: Sidecar AI agent integration (LangGraph) with selectable LLM.
-* Policy ↔ Billing integration with `BillingObligation` records created from committed transaction premium deltas (including negative credits on reductions).
-* Billing endpoint `POST /v1/billing/obligations/{obligationId}/invoice` for invoice generation directly from policy obligations.
-* Optional policy snapshot financial view (`includeFinancials`) returning obligations, linked invoices, and paid totals.
-* New domain events: `BillingObligationCreated`, `InvoiceGeneratedFromPolicy`, and `PolicyFinancialPositionChanged`.
-* New onboarding docs for junior contributors: technical/infrastructure overview and high-level core architecture.
+
+## [0.3.0] - 2026-02-28
+
+### Added
+
+* UI-1 channel app bootstrap at `apps/channel-ui` using Next.js App Router + TypeScript.
+* Login/logout UI with secure httpOnly cookie flow via Next route handlers (`/api/auth/login`, `/api/auth/logout`) and route protection middleware.
+* API-only channel architecture with core proxy route (`/api/core/[...path]`) that forwards JWT and correlation IDs to `core-api`.
+* Product Management UI module:
+  - Products list/create and product detail with versions list/create.
+  - Product version detail with status actions, component references, and snapshot visibility.
+  - Component management pages (list/create, version list/create with JSON editing).
+  - Pricing program pages (list/create, version list/create with `fileRef` and JSON schemas).
+* Optional dev WebSocket events panel in channel UI (`NEXT_PUBLIC_CORE_WS_URL`).
+* Core auth endpoint `POST /auth/login` for local JWT issuance from persisted users.
+* Additional Product Management read/query APIs used by channel UI:
+  - product versions list/get
+  - product version component refs list
+  - product version snapshot get
+  - component get + version list
+  - pricing program list/get + version list
 
 ### Changed
 
 * Updated architecture and information model diagrams to reflect Policy ↔ Billing integration (`BillingObligation`, obligation-backed invoice generation, and financial position/event flow).
+* Added junior-friendly onboarding docs for technical/infrastructure setup and high-level architecture.
 
 ## [0.2.x] - 2026-02-28
 

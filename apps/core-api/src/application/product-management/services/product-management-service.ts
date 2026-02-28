@@ -71,6 +71,55 @@ export class ProductManagementService {
     return dto;
   }
 
+  public async listProductVersions(productId: string): Promise<ReadonlyArray<ProductVersionDto>> {
+    const product = await this.repository.getProductById(productId);
+    if (!product) {
+      throw new ProductManagementApplicationError("Product not found", 404);
+    }
+    const rows = await this.repository.listProductVersionsByProductId(productId);
+    return rows.map((row) => toProductVersionDto(row));
+  }
+
+  public async getProductVersion(productVersionId: string): Promise<ProductVersionDto> {
+    const row = await this.repository.getProductVersionById(productVersionId);
+    if (!row) {
+      throw new ProductManagementApplicationError("ProductVersion not found", 404);
+    }
+    return toProductVersionDto(row);
+  }
+
+  public async listProductVersionComponentRefs(productVersionId: string): Promise<
+    ReadonlyArray<{
+      id: string;
+      productVersionId: string;
+      componentVersionId: string;
+      configOverrides: JsonObject;
+      createdAt: string;
+      componentVersion: ComponentVersionDto;
+    }>
+  > {
+    const row = await this.repository.getProductVersionById(productVersionId);
+    if (!row) {
+      throw new ProductManagementApplicationError("ProductVersion not found", 404);
+    }
+    const refs = await this.repository.listProductVersionComponentRefs(productVersionId);
+    return refs.map((ref) => ({
+      id: ref.id,
+      productVersionId: ref.productVersionId,
+      componentVersionId: ref.componentVersionId,
+      configOverrides: structuredClone(ref.configOverrides),
+      createdAt: ref.createdAt.toISOString(),
+      componentVersion: toComponentVersionDto(ref.componentVersion),
+    }));
+  }
+
+  public async getProductVersionSnapshot(
+    productVersionId: string,
+  ): Promise<ProductVersionSnapshotDto | null> {
+    const snapshot = await this.repository.getProductVersionSnapshot(productVersionId);
+    return snapshot ? toProductVersionSnapshotDto(snapshot) : null;
+  }
+
   public async listProducts(): Promise<ReadonlyArray<ProductDto>> {
     const products = await this.repository.listProducts();
     return products.map((product) => toProductDto(product));
@@ -280,6 +329,23 @@ export class ProductManagementService {
     return components.map((component) => toComponentDto(component));
   }
 
+  public async getComponent(componentId: string): Promise<ComponentDto> {
+    const component = await this.repository.getComponentById(componentId);
+    if (!component) {
+      throw new ProductManagementApplicationError("Component not found", 404);
+    }
+    return toComponentDto(component);
+  }
+
+  public async listComponentVersions(componentId: string): Promise<ReadonlyArray<ComponentVersionDto>> {
+    const component = await this.repository.getComponentById(componentId);
+    if (!component) {
+      throw new ProductManagementApplicationError("Component not found", 404);
+    }
+    const rows = await this.repository.listComponentVersionsByComponentId(componentId);
+    return rows.map((row) => toComponentVersionDto(row));
+  }
+
   public async getComponentVersionByCompositeKey(
     componentId: string,
     version: number,
@@ -332,6 +398,30 @@ export class ProductManagementService {
   }): Promise<PricingProgramDto> {
     const created = await this.repository.createPricingProgram(input);
     return toPricingProgramDto(created);
+  }
+
+  public async listPricingPrograms(): Promise<ReadonlyArray<PricingProgramDto>> {
+    const rows = await this.repository.listPricingPrograms();
+    return rows.map((row) => toPricingProgramDto(row));
+  }
+
+  public async getPricingProgram(pricingProgramId: string): Promise<PricingProgramDto> {
+    const row = await this.repository.getPricingProgramById(pricingProgramId);
+    if (!row) {
+      throw new ProductManagementApplicationError("PricingProgram not found", 404);
+    }
+    return toPricingProgramDto(row);
+  }
+
+  public async listPricingProgramVersions(
+    pricingProgramId: string,
+  ): Promise<ReadonlyArray<PricingProgramVersionDto>> {
+    const program = await this.repository.getPricingProgramById(pricingProgramId);
+    if (!program) {
+      throw new ProductManagementApplicationError("PricingProgram not found", 404);
+    }
+    const rows = await this.repository.listPricingProgramVersionsByPricingProgramId(pricingProgramId);
+    return rows.map((row) => toPricingProgramVersionDto(row));
   }
 
   public async createPricingProgramVersion(input: {

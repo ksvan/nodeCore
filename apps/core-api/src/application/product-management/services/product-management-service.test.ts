@@ -130,6 +130,12 @@ class InMemoryProductManagementRepository implements ProductManagementRepository
     return this.productVersions.get(productVersionId) ?? null;
   }
 
+  public async listProductVersionsByProductId(
+    productId: string,
+  ): Promise<ReadonlyArray<ProductVersionRecord>> {
+    return [...this.productVersions.values()].filter((row) => row.productId === productId);
+  }
+
   public async getNextProductVersionNumber(productId: string): Promise<number> {
     const versions = [...this.productVersions.values()].filter((version) => version.productId === productId);
     const latest = versions.reduce((max, item) => Math.max(max, item.version), 0);
@@ -247,6 +253,12 @@ class InMemoryProductManagementRepository implements ProductManagementRepository
     return this.components.get(componentId) ?? null;
   }
 
+  public async listComponentVersionsByComponentId(
+    componentId: string,
+  ): Promise<ReadonlyArray<ComponentVersionRecord>> {
+    return [...this.componentVersions.values()].filter((row) => row.componentId === componentId);
+  }
+
   public async createComponentVersion(input: {
     componentId: string;
     version: number;
@@ -318,6 +330,10 @@ class InMemoryProductManagementRepository implements ProductManagementRepository
     return program;
   }
 
+  public async listPricingPrograms(): Promise<ReadonlyArray<PricingProgramRecord>> {
+    return [...this.pricingPrograms.values()];
+  }
+
   public async getPricingProgramById(pricingProgramId: string): Promise<PricingProgramRecord | null> {
     return this.pricingPrograms.get(pricingProgramId) ?? null;
   }
@@ -367,6 +383,14 @@ class InMemoryProductManagementRepository implements ProductManagementRepository
     pricingProgramVersionId: string,
   ): Promise<PricingProgramVersionRecord | null> {
     return this.pricingProgramVersions.get(pricingProgramVersionId) ?? null;
+  }
+
+  public async listPricingProgramVersionsByPricingProgramId(
+    pricingProgramId: string,
+  ): Promise<ReadonlyArray<PricingProgramVersionRecord>> {
+    return [...this.pricingProgramVersions.values()].filter(
+      (row) => row.pricingProgramId === pricingProgramId,
+    );
   }
 }
 
