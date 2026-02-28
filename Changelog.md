@@ -11,17 +11,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 * Planned: Node-RED nodes for consuming WebSocket events and calling nodeCore APIs.
 * Planned: MCP interface for package metadata and API exposure to agents.
 * Planned: Sidecar AI agent integration (LangGraph) with selectable LLM.
-* Root demo startup script (`demo-start.sh` / `pnpm demo:start`) to run `core-api` and `channel-ui` together for local demos.
+
+## [0.4.0] - 2026-02-28
+
+### Added
+
 * UI-2 Policy Workspace in `apps/channel-ui`:
   - Policy search/list page.
   - New Business creation flow (policy + NB draft transaction).
   - Transaction workspace for draft risks, coverages, and coverage terms (replace semantics), plus validate/rate/commit actions.
   - Policy detail page with transaction list, as-of snapshot viewer, and endorsement draft creation.
+* UI-3 Billing Workspace in `apps/channel-ui`:
+  - Billing account list/search + create account.
+  - Billing account detail with invoice creation/posting, payment recording, payment allocation, and obligation-to-invoice action.
+  - Invoice detail and payment detail pages.
+  - Policy detail financial section extended to show obligations, linked invoices, paid amount, and links into Billing screens.
 
 ### Changed
 
-* Channel UI policy navigation now links directly to policy list and NB creation routes.
+* Channel UI policy navigation now links directly to policy and billing workspace routes.
 * Policy UI explicitly documents backend contract gap: no draft read endpoint for risks/coverages/terms, so client prefill after reload is limited.
+* Billing UI documents current backend contract gaps for allocation drill-down (invoice/payment detail endpoints return computed totals, not full allocation rows).
 
 ## [0.3.0] - 2026-02-28
 

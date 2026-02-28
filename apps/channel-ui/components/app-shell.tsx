@@ -43,7 +43,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Item href="/policy/create" label="Create New Business" pathname={pathname} />
 
         <h4 style={{ marginTop: 20 }}>Billing</h4>
-        <Item href="/billing" label="Billing (placeholder)" pathname={pathname} />
+        <Item href="/billing/accounts" label="Accounts" pathname={pathname} />
+        <Item href="/billing/invoices" label="Invoices" pathname={pathname} />
+        <Item href="/billing/payments" label="Payments" pathname={pathname} />
 
         <div style={{ marginTop: 20 }}>
           <Link href="/logout" className="muted">

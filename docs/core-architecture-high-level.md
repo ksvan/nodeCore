@@ -63,6 +63,7 @@ Why this matters: it keeps business logic independent from frameworks and easier
 - Current UI modules:
   - Product Management workspace (UI-1).
   - Policy Workspace (UI-2): policy list/search, NB + endorsement draft flows, transaction editing (risks/coverages/terms), rate/commit, and as-of snapshot view.
+  - Billing Workspace (UI-3): accounts, invoices, payments, allocations, and policy financial drill-in links.
 
 ## For new contributors
 

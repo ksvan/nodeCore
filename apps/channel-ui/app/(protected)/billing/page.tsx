@@ -1,8 +1,5 @@
-export default function BillingPlaceholderPage() {
-  return (
-    <div className="panel">
-      <h1>Billing</h1>
-      <p className="muted">Billing UI is planned for a later phase.</p>
-    </div>
-  );
+import { redirect } from "next/navigation";
+
+export default function BillingRootPage() {
+  redirect("/billing/accounts");
 }

@@ -70,6 +70,7 @@ Current `channel-ui` scope:
 - Login/logout + protected routing (cookie/JWT proxy pattern).
 - Product Management UI (products, components, pricing programs).
 - Policy UI (list/search, new business creation, transaction workspace, endorsement flow, as-of snapshots).
+- Billing UI (accounts, invoices, payments, allocations, and policy-financial links).
 
 ## Security and reliability basics
 

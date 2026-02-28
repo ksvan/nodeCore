@@ -235,3 +235,80 @@ export interface PolicySnapshotDto {
     paidAmount: string;
   } | null;
 }
+
+export interface BillingAccountListItemDto {
+  id: string;
+  partyId: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BillingAccountDto extends BillingAccountListItemDto {
+  accountBalance: string;
+}
+
+export interface BillingInvoiceListItemDto {
+  id: string;
+  invoiceNumber: string;
+  currency: CurrencyCode;
+  dueDate: string;
+  status: string;
+  invoiceTotal: string;
+  amountPaid: string;
+  amountDue: string;
+}
+
+export interface BillingInvoiceLineDto {
+  id: string;
+  description: string;
+  quantity: string;
+  unitAmount: string;
+  lineTotal: string;
+}
+
+export interface BillingInvoiceDto {
+  id: string;
+  invoiceNumber: string;
+  billingAccountId: string;
+  currency: CurrencyCode;
+  status: string;
+  dueDate: string;
+  invoiceTotal: string;
+  amountPaid: string;
+  amountDue: string;
+  lines: ReadonlyArray<BillingInvoiceLineDto>;
+}
+
+export interface BillingPaymentListItemDto {
+  id: string;
+  amount: string;
+  currency: CurrencyCode;
+  status: string;
+  providerRef: string | null;
+  paymentUnallocatedAmount: string;
+  createdAt: string;
+}
+
+export interface BillingPaymentDto {
+  id: string;
+  billingAccountId: string;
+  amount: string;
+  currency: CurrencyCode;
+  status: string;
+  providerRef: string | null;
+  paymentUnallocatedAmount: string;
+  createdAt: string;
+}
+
+export interface BillingObligationInvoiceDto {
+  obligationId: string;
+  policyId: string;
+  invoiceId: string;
+  invoiceNumber: string;
+  billingAccountId: string;
+  currency: CurrencyCode;
+  invoiceTotal: string;
+  dueDate: string;
+  status: string;
+}
