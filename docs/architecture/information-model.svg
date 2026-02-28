@@ -20,7 +20,7 @@
 
   <rect class="bg" x="0" y="0" width="2200" height="1400"/>
   <text class="title" x="40" y="58">nodeCore Information Model</text>
-  <text class="subtitle" x="40" y="86">Source: apps/core-api/prisma/schema.prisma (entities + key relations)</text>
+  <text class="subtitle" x="40" y="86">Source: apps/core-api/prisma/schema.prisma (MVP entities + key relations)</text>
 
   <!-- Product + Pricing domain -->
   <rect class="group" x="30" y="120" width="1040" height="700" fill="#dcfce7"/>
@@ -86,7 +86,7 @@
   <text class="entityText" x="754" y="658">PK id (uuid), requestId (unique)</text>
   <text class="entityText" x="754" y="678">FK productVersionId, FK pricingProgramVersionId</text>
   <text class="entityText" x="754" y="698">requestJson, responseJson</text>
-  <text class="entityText" x="754" y="718">currency, success, failureReason</text>
+  <text class="entityText" x="754" y="718">currency, success, errorSummary</text>
 
   <!-- Policy domain -->
   <rect class="group" x="1100" y="120" width="1060" height="620" fill="#dbeafe"/>
@@ -101,34 +101,35 @@
   <rect class="box" x="1410" y="180" width="260" height="170" fill="#ffffff"/>
   <text class="entityTitle" x="1424" y="205">PolicyTerm</text>
   <text class="entityText" x="1424" y="228">PK id (uuid), FK policyId</text>
-  <text class="entityText" x="1424" y="248">termNumber (unique with policyId)</text>
-  <text class="entityText" x="1424" y="268">status, effectiveFrom, effectiveTo</text>
+  <text class="entityText" x="1424" y="248">termStart, termEnd</text>
+  <text class="entityText" x="1424" y="268">status: PolicyTermStatus</text>
 
   <rect class="box" x="1720" y="180" width="400" height="220" fill="#ffffff"/>
   <text class="entityTitle" x="1734" y="205">PolicyTransaction</text>
-  <text class="entityText" x="1734" y="228">PK id (uuid), FK policyId, FK policyTermId?</text>
-  <text class="entityText" x="1734" y="248">transactionNumber (unique with policyId)</text>
-  <text class="entityText" x="1734" y="268">transactionType, status</text>
-  <text class="entityText" x="1734" y="288">effectiveFrom, effectiveTo</text>
-  <text class="entityText" x="1734" y="308">FK productVersionId, FK pricingProgramVersionId?</text>
-  <text class="entityText" x="1734" y="328">draftPayload, ratingRequest/Response</text>
+  <text class="entityText" x="1734" y="228">PK id (uuid), FK policyId, FK termId</text>
+  <text class="entityText" x="1734" y="248">type: NEW_BUSINESS|ENDORSEMENT</text>
+  <text class="entityText" x="1734" y="268">status: DRAFT|COMMITTED</text>
+  <text class="entityText" x="1734" y="288">effectiveAt, committedAt</text>
+  <text class="entityText" x="1734" y="308">requestId/idempotencyKey</text>
+  <text class="entityText" x="1734" y="328">ratingRequestJson/ratingResponseJson</text>
 
   <rect class="box" x="1410" y="430" width="330" height="170" fill="#ffffff"/>
-  <text class="entityTitle" x="1424" y="455">PolicyExposureRecord</text>
+  <text class="entityTitle" x="1424" y="455">PolicyRisk</text>
   <text class="entityText" x="1424" y="478">PK id (uuid)</text>
-  <text class="entityText" x="1424" y="498">FK policyId, policyTermId, policyTransactionId</text>
-  <text class="entityText" x="1424" y="518">exposureKey, data, effective range</text>
+  <text class="entityText" x="1424" y="498">FK policyId, termId, createdByTransactionId</text>
+  <text class="entityText" x="1424" y="518">riskType, riskKey, attributes, effective range</text>
 
   <rect class="box" x="1760" y="430" width="330" height="170" fill="#ffffff"/>
-  <text class="entityTitle" x="1774" y="455">PolicyCoverageRecord</text>
+  <text class="entityTitle" x="1774" y="455">PolicyCoverage</text>
   <text class="entityText" x="1774" y="478">PK id (uuid)</text>
-  <text class="entityText" x="1774" y="498">FK policyId, policyTermId, policyTransactionId</text>
-  <text class="entityText" x="1774" y="518">coverageKey, data, effective range</text>
+  <text class="entityText" x="1774" y="498">FK policyId, termId, createdByTransactionId</text>
+  <text class="entityText" x="1774" y="518">coverageCode, appliesToRiskId, effective range</text>
 
-  <rect class="box" x="1130" y="430" width="240" height="130" fill="#ffffff"/>
-  <text class="entityTitle" x="1144" y="455">PolicyEditLog</text>
-  <text class="entityText" x="1144" y="478">PK id (uuid), FK policyId</text>
-  <text class="entityText" x="1144" y="498">editType, data</text>
+  <rect class="box" x="1130" y="430" width="240" height="150" fill="#ffffff"/>
+  <text class="entityTitle" x="1144" y="455">PolicyPremium</text>
+  <text class="entityText" x="1144" y="478">PK id (uuid), FK policyId, termId</text>
+  <text class="entityText" x="1144" y="498">totalAmount, currency, breakdown</text>
+  <text class="entityText" x="1144" y="518">effectiveFrom/effectiveTo</text>
 
   <!-- Billing domain -->
   <rect class="group" x="30" y="860" width="2130" height="500" fill="#fce7f3"/>
@@ -147,11 +148,12 @@
   <text class="entityText" x="374" y="1018">currency, dueDate, totalAmount</text>
   <text class="entityText" x="374" y="1038">postedAt, createdAt, updatedAt</text>
 
-  <rect class="box" x="720" y="930" width="300" height="170" fill="#ffffff"/>
+  <rect class="box" x="720" y="930" width="300" height="190" fill="#ffffff"/>
   <text class="entityTitle" x="734" y="955">InvoiceLine</text>
   <text class="entityText" x="734" y="978">PK id (uuid), FK invoiceId</text>
-  <text class="entityText" x="734" y="998">description, quantity</text>
-  <text class="entityText" x="734" y="1018">unitAmount, lineTotal</text>
+  <text class="entityText" x="734" y="998">FK billingObligationId?</text>
+  <text class="entityText" x="734" y="1018">description, quantity</text>
+  <text class="entityText" x="734" y="1038">unitAmount, lineTotal</text>
 
   <rect class="box" x="1070" y="930" width="300" height="190" fill="#ffffff"/>
   <text class="entityTitle" x="1084" y="955">Payment</text>
@@ -167,17 +169,19 @@
   <text class="entityText" x="1434" y="1018">amount, createdAt</text>
   <text class="entityText" x="1434" y="1038">unique(paymentId, invoiceId)</text>
 
-  <rect class="box" x="1770" y="930" width="370" height="170" fill="#ffffff"/>
-  <text class="entityTitle" x="1784" y="955">BillingIdempotencyKey</text>
-  <text class="entityText" x="1784" y="978">PK id (uuid)</text>
-  <text class="entityText" x="1784" y="998">commandScope + idempotencyKey (unique)</text>
-  <text class="entityText" x="1784" y="1018">responseJson, createdAt</text>
+  <rect class="box" x="1770" y="930" width="370" height="190" fill="#ffffff"/>
+  <text class="entityTitle" x="1784" y="955">BillingObligation</text>
+  <text class="entityText" x="1784" y="978">PK id (uuid), policyId, policyTransactionId</text>
+  <text class="entityText" x="1784" y="998">termId, billingAccountId?</text>
+  <text class="entityText" x="1784" y="1018">amount, currency, dueDate</text>
+  <text class="entityText" x="1784" y="1038">status: OPEN | INVOICED | CANCELLED</text>
 
-  <rect class="box" x="1770" y="1140" width="370" height="170" fill="#ffffff"/>
+  <rect class="box" x="1770" y="1140" width="370" height="190" fill="#ffffff"/>
   <text class="entityTitle" x="1784" y="1165">BillingAuditLog</text>
   <text class="entityText" x="1784" y="1188">PK id (uuid), FK billingAccountId?</text>
   <text class="entityText" x="1784" y="1208">entityType, entityId, action</text>
   <text class="entityText" x="1784" y="1228">data, createdAt</text>
+  <text class="entityText" x="1784" y="1248">(+ BillingIdempotencyKey table in schema)</text>
 
   <!-- Shared enums -->
   <rect class="enumBox" x="60" y="1240" width="520" height="95"/>
@@ -220,7 +224,7 @@
   <text class="label" x="1970" y="414">tx to coverages</text>
 
   <path class="rel" d="M 1245 330 L 1245 430"/>
-  <text class="label" x="1252" y="382">policy to edits</text>
+  <text class="label" x="1252" y="382">policy to premiums</text>
 
   <path class="rel" d="M 310 990 L 360 990"/>
   <text class="label" x="320" y="980">1 to many invoices</text>
@@ -239,6 +243,12 @@
 
   <path class="rel" d="M 310 1080 L 1770 1220"/>
   <text class="label" x="1020" y="1166">audit logs optionally bind to account</text>
+
+  <path class="rel" d="M 670 980 L 1770 980"/>
+  <text class="label" x="1160" y="972">invoice lines may reference obligations</text>
+
+  <path class="rel" d="M 1360 300 L 1770 1030"/>
+  <text class="label" x="1510" y="660">policy tx may generate obligations</text>
 
   <!-- Cross-domain refs -->
   <path class="rel" d="M 1870 400 L 600 240"/>

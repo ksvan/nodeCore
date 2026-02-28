@@ -63,9 +63,12 @@
   <text x="1562" y="798" class="small">referenced by</text>
   <text x="1562" y="822" class="small">pricingProgramVersion.fileRef</text>
 
-  <rect x="960" y="700" width="320" height="180" class="box" fill="#e2efff"/>
+  <rect x="960" y="700" width="320" height="220" class="box" fill="#e2efff"/>
   <text x="982" y="738" class="hdr">Domain Events</text>
   <text x="982" y="774" class="txt">Published to WS consumers</text>
+  <text x="982" y="800" class="small">- BillingObligationCreated</text>
+  <text x="982" y="824" class="small">- InvoiceGeneratedFromPolicy</text>
+  <text x="982" y="848" class="small">- PolicyFinancialPositionChanged</text>
 
   <line x1="360" y1="280" x2="430" y2="280" class="arrow"/>
   <text x="378" y="266" class="label">HTTP</text>
@@ -90,4 +93,7 @@
 
   <line x1="960" y1="790" x2="840" y2="570" class="arrow"/>
   <text x="850" y="666" class="label">ws broadcast</text>
+
+  <text x="452" y="542" class="small">Policy commit integrates to BillingService via application port</text>
+  <text x="452" y="566" class="small">Creates BillingObligation + /v1/billing/obligations/{id}/invoice</text>
 </svg>

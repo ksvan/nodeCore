@@ -15,6 +15,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 * Billing endpoint `POST /v1/billing/obligations/{obligationId}/invoice` for invoice generation directly from policy obligations.
 * Optional policy snapshot financial view (`includeFinancials`) returning obligations, linked invoices, and paid totals.
 * New domain events: `BillingObligationCreated`, `InvoiceGeneratedFromPolicy`, and `PolicyFinancialPositionChanged`.
+* New onboarding docs for junior contributors: technical/infrastructure overview and high-level core architecture.
+
+### Changed
+
+* Updated architecture and information model diagrams to reflect Policy ↔ Billing integration (`BillingObligation`, obligation-backed invoice generation, and financial position/event flow).
 
 ## [0.2.x] - 2026-02-28
 
