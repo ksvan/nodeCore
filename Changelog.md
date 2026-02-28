@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 * Planned: Node-RED nodes for consuming WebSocket events and calling nodeCore APIs.
 * Planned: MCP interface for package metadata and API exposure to agents.
 * Planned: Sidecar AI agent integration (LangGraph) with selectable LLM.
+* Root demo startup script (`demo-start.sh` / `pnpm demo:start`) to run `core-api` and `channel-ui` together for local demos.
 
 ## [0.3.0] - 2026-02-28
 
@@ -37,6 +38,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 * Updated architecture and information model diagrams to reflect Policy ↔ Billing integration (`BillingObligation`, obligation-backed invoice generation, and financial position/event flow).
 * Added junior-friendly onboarding docs for technical/infrastructure setup and high-level architecture.
+* Added a dedicated UI integration architecture diagram: `docs/architecture/channel-ui-integration.svg`.
 
 ## [0.2.x] - 2026-02-28
 

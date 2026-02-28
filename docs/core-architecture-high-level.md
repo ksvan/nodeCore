@@ -53,6 +53,14 @@ Why this matters: it keeps business logic independent from frameworks and easier
 - Billing remains its own domain and data owner.
 - Cross-domain communication should happen through service interfaces and events, not direct DB coupling.
 
+## UI integration
+
+- Channel UI (`apps/channel-ui`) is a separate app.
+- UI never reads the database directly.
+- UI calls core APIs (REST) and can listen to `/ws/events`.
+- Login uses `/auth/login` via a UI proxy route that stores JWT in an httpOnly cookie.
+- Protected pages forward auth to core through API proxy handlers.
+
 ## For new contributors
 
 Start by reading:

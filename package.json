@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "description": "nodeCore workspace",
   "scripts": {
+    "demo:start": "./demo-start.sh",
     "dev:core-api": "pnpm --filter @nodecore/core-api dev",
     "dev:channel-ui": "pnpm --filter @nodecore/channel-ui dev",
     "build:core-api": "pnpm --filter @nodecore/core-api build",

@@ -52,6 +52,19 @@ Typical commands (from `apps/core-api`):
 - Product versions point to pricing program versions (`fileRef`).
 - Pricing runs are persisted for auditability (request/response and metadata).
 
+## Demo startup (frontend + backend)
+
+From repo root:
+
+- `./demo-start.sh`
+or
+- `pnpm demo:start`
+
+This starts:
+
+- `core-api` at `http://localhost:4000`
+- `channel-ui` at `http://localhost:3000`
+
 ## Security and reliability basics
 
 - JWT auth is required for API endpoints.

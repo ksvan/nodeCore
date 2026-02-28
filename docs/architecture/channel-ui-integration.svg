@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1000" viewBox="0 0 1800 1000">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155" />
+    </marker>
+    <style>
+      .title { font: 700 34px Arial, sans-serif; fill: #0f172a; }
+      .hdr { font: 700 22px Arial, sans-serif; fill: #0f172a; }
+      .txt { font: 16px Arial, sans-serif; fill: #1f2937; }
+      .small { font: 13px Arial, sans-serif; fill: #475569; }
+      .box { stroke: #334155; stroke-width: 2; rx: 12; ry: 12; }
+      .arrow { stroke: #334155; stroke-width: 2.4; fill: none; marker-end: url(#arrow); }
+      .label { font: 13px Arial, sans-serif; fill: #334155; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1800" height="1000" fill="#f8fafc" />
+  <text x="40" y="60" class="title">Channel UI Integration Architecture</text>
+
+  <rect x="70" y="180" width="260" height="220" class="box" fill="#e0f2fe" />
+  <text x="92" y="220" class="hdr">Browser</text>
+  <text x="92" y="254" class="txt">- Login page</text>
+  <text x="92" y="280" class="txt">- Product Mgmt pages</text>
+  <text x="92" y="306" class="txt">- Dev events panel</text>
+
+  <rect x="430" y="120" width="560" height="420" class="box" fill="#dcfce7" />
+  <text x="452" y="160" class="hdr">apps/channel-ui (Next.js App Router)</text>
+  <text x="452" y="196" class="txt">App Routes</text>
+  <text x="470" y="222" class="txt">- /login, /logout</text>
+  <text x="470" y="248" class="txt">- /product-management/*</text>
+  <text x="452" y="286" class="txt">Route Handlers</text>
+  <text x="470" y="312" class="txt">- /api/auth/login</text>
+  <text x="470" y="338" class="txt">- /api/auth/logout</text>
+  <text x="470" y="364" class="txt">- /api/core/[...path] proxy</text>
+  <text x="452" y="402" class="txt">Middleware</text>
+  <text x="470" y="428" class="txt">- auth guard via httpOnly cookie</text>
+  <text x="452" y="466" class="txt">Client Lib</text>
+  <text x="470" y="492" class="txt">- typed api client + error parsing</text>
+
+  <rect x="1080" y="120" width="560" height="420" class="box" fill="#fee2e2" />
+  <text x="1102" y="160" class="hdr">apps/core-api (Fastify)</text>
+  <text x="1102" y="196" class="txt">Auth</text>
+  <text x="1120" y="222" class="txt">- POST /auth/login (JWT issue)</text>
+  <text x="1102" y="260" class="txt">Product Management APIs</text>
+  <text x="1120" y="286" class="txt">- /v1/product-management/*</text>
+  <text x="1102" y="324" class="txt">Realtime Events</text>
+  <text x="1120" y="350" class="txt">- /ws/events</text>
+  <text x="1102" y="388" class="txt">Validation + domain logic stays here</text>
+
+  <rect x="1080" y="680" width="250" height="170" class="box" fill="#e5e7eb" />
+  <text x="1102" y="720" class="hdr">PostgreSQL</text>
+  <text x="1102" y="754" class="txt">Core system of record</text>
+
+  <line x1="330" y1="260" x2="430" y2="260" class="arrow" />
+  <text x="350" y="246" class="label">HTTPS</text>
+
+  <line x1="990" y1="312" x2="1080" y2="312" class="arrow" />
+  <text x="1010" y="298" class="label">proxy REST + JWT</text>
+
+  <line x1="990" y1="350" x2="1080" y2="350" class="arrow" />
+  <text x="1010" y="336" class="label">WS (dev panel)</text>
+
+  <line x1="1240" y1="540" x2="1240" y2="680" class="arrow" />
+  <text x="1250" y="614" class="label">Prisma</text>
+
+  <text x="70" y="920" class="small">Boundary rule: UI is loosely coupled (API/event only). No direct DB access or core domain logic in channel app.</text>
+</svg>
