@@ -142,6 +142,9 @@ class InMemoryPolicyRepository implements PolicyRepository {
       effectiveAt: input.effectiveAt,
       requestId: input.requestId,
       idempotencyKey: input.idempotencyKey,
+      ratingRequestJson: null,
+      ratingResponseJson: null,
+      ratedAt: null,
       createdAt: new Date(),
       committedAt: null,
     };
@@ -164,6 +167,26 @@ class InMemoryPolicyRepository implements PolicyRepository {
     }
     const updated: PolicyTransactionRecord = { ...tx, status: "COMMITTED", committedAt };
     this.transactions.set(transactionId, updated);
+    return updated;
+  }
+
+  public async setPolicyTransactionRating(input: {
+    transactionId: string;
+    ratingRequestJson: JsonObject;
+    ratingResponseJson: JsonObject;
+    ratedAt: Date;
+  }): Promise<PolicyTransactionRecord> {
+    const tx = this.transactions.get(input.transactionId);
+    if (!tx) {
+      throw new Error("tx not found");
+    }
+    const updated: PolicyTransactionRecord = {
+      ...tx,
+      ratingRequestJson: input.ratingRequestJson,
+      ratingResponseJson: input.ratingResponseJson,
+      ratedAt: input.ratedAt,
+    };
+    this.transactions.set(input.transactionId, updated);
     return updated;
   }
 
@@ -428,6 +451,39 @@ class InMemoryPolicyRepository implements PolicyRepository {
     }
   }
 
+  public async createPolicyPremiums(input: {
+    policyId: string;
+    termId: string;
+    createdByTransactionId: string;
+    effectiveFrom: Date;
+    effectiveTo: Date;
+    premiums: readonly {
+      coverageId: string | null;
+      riskId: string | null;
+      totalAmount: string;
+      currency: string;
+      breakdown: JsonObject | null;
+    }[];
+  }): Promise<void> {
+    for (const premium of input.premiums) {
+      const row: PolicyPremiumRecord = {
+        id: randomUUID(),
+        policyId: input.policyId,
+        termId: input.termId,
+        coverageId: premium.coverageId,
+        riskId: premium.riskId,
+        totalAmount: premium.totalAmount,
+        currency: premium.currency,
+        breakdown: premium.breakdown,
+        effectiveFrom: input.effectiveFrom,
+        effectiveTo: input.effectiveTo,
+        createdByTransactionId: input.createdByTransactionId,
+        createdAt: new Date(),
+      };
+      this.premiums.set(row.id, row);
+    }
+  }
+
   public async getAsOfRisks(policyId: string, asOf: Date): Promise<readonly PolicyRiskRecord[]> {
     return [...this.risks.values()].filter(
       (row) => row.policyId === policyId && row.effectiveFrom <= asOf && row.effectiveTo > asOf,
@@ -472,7 +528,22 @@ class InMemoryPolicyRepository implements PolicyRepository {
 }
 
 test("NB commit creates structured effective-dated risks/coverages/terms", async () => {
-  const service = new PolicyService(new InMemoryPolicyRepository(), new InMemoryEventPublisher());
+  const service = new PolicyService(
+    new InMemoryPolicyRepository(),
+    {
+      calculate: async () => ({
+        requestId: randomUUID(),
+        response: {
+          schemaVersion: "v1",
+          requestId: randomUUID(),
+          resultVersion: "test",
+          totals: { totalPremium: "100.00", currency: "SEK" },
+          errors: [],
+        },
+      }),
+    },
+    new InMemoryEventPublisher(),
+  );
 
   const policy = await service.createPolicy({
     policyNumber: "P-001",
@@ -526,7 +597,22 @@ test("NB commit creates structured effective-dated risks/coverages/terms", async
 });
 
 test("endorsement closes previous rows and inserts new rows at effective date", async () => {
-  const service = new PolicyService(new InMemoryPolicyRepository(), new InMemoryEventPublisher());
+  const service = new PolicyService(
+    new InMemoryPolicyRepository(),
+    {
+      calculate: async () => ({
+        requestId: randomUUID(),
+        response: {
+          schemaVersion: "v1",
+          requestId: randomUUID(),
+          resultVersion: "test",
+          totals: { totalPremium: "100.00", currency: "SEK" },
+          errors: [],
+        },
+      }),
+    },
+    new InMemoryEventPublisher(),
+  );
 
   const policy = await service.createPolicy({
     policyNumber: "P-002",
@@ -579,7 +665,22 @@ test("endorsement closes previous rows and inserts new rows at effective date", 
 });
 
 test("as-of snapshot changes across endorsement", async () => {
-  const service = new PolicyService(new InMemoryPolicyRepository(), new InMemoryEventPublisher());
+  const service = new PolicyService(
+    new InMemoryPolicyRepository(),
+    {
+      calculate: async () => ({
+        requestId: randomUUID(),
+        response: {
+          schemaVersion: "v1",
+          requestId: randomUUID(),
+          resultVersion: "test",
+          totals: { totalPremium: "100.00", currency: "SEK" },
+          errors: [],
+        },
+      }),
+    },
+    new InMemoryEventPublisher(),
+  );
 
   const policy = await service.createPolicy({
     policyNumber: "P-003",
@@ -633,7 +734,22 @@ test("as-of snapshot changes across endorsement", async () => {
 });
 
 test("idempotent commit does not duplicate rows", async () => {
-  const service = new PolicyService(new InMemoryPolicyRepository(), new InMemoryEventPublisher());
+  const service = new PolicyService(
+    new InMemoryPolicyRepository(),
+    {
+      calculate: async () => ({
+        requestId: randomUUID(),
+        response: {
+          schemaVersion: "v1",
+          requestId: randomUUID(),
+          resultVersion: "test",
+          totals: { totalPremium: "100.00", currency: "SEK" },
+          errors: [],
+        },
+      }),
+    },
+    new InMemoryEventPublisher(),
+  );
 
   const policy = await service.createPolicy({
     policyNumber: "P-004",
@@ -669,4 +785,58 @@ test("idempotent commit does not duplicate rows", async () => {
   const snapshot = await service.getPolicySnapshot(policy.id, new Date("2026-02-01T00:00:00.000Z"));
   assert.equal(snapshot.risks.length, 1);
   assert.equal(snapshot.coverages.length, 1);
+});
+
+test("rating stores premium and commit creates effective-dated PolicyPremium row", async () => {
+  const service = new PolicyService(
+    new InMemoryPolicyRepository(),
+    {
+      calculate: async () => ({
+        requestId: randomUUID(),
+        response: {
+          schemaVersion: "v1",
+          requestId: randomUUID(),
+          resultVersion: "ppv-1",
+          totals: { totalPremium: "321.00", currency: "SEK" },
+          errors: [],
+        },
+      }),
+    },
+    new InMemoryEventPublisher(),
+  );
+
+  const policy = await service.createPolicy({
+    policyNumber: "P-005",
+    productId: randomUUID(),
+    productVersionId: randomUUID(),
+    termStart: new Date("2026-01-01T00:00:00.000Z"),
+    termEnd: new Date("2027-01-01T00:00:00.000Z"),
+    idempotencyKey: "create-policy-5",
+  });
+
+  const tx = await service.createTransaction({
+    policyId: policy.id,
+    type: "NEW_BUSINESS",
+    effectiveAt: new Date("2026-01-01T00:00:00.000Z"),
+    requestId: randomUUID(),
+    idempotencyKey: "nb-tx-5",
+  });
+
+  await service.replaceTransactionRisks({
+    transactionId: tx.id,
+    risks: [{ riskType: "VEHICLE", riskKey: "REG-5", attributes: {} }],
+  });
+  await service.replaceTransactionCoverages({
+    transactionId: tx.id,
+    coverages: [{ coverageCode: "CASCO", appliesToRiskKey: "REG-5", attributes: {} }],
+  });
+
+  const rated = await service.rateTransaction({ transactionId: tx.id, requestId: randomUUID() });
+  assert.equal(rated.totalPremium, "321.00");
+
+  await service.commitTransaction({ transactionId: tx.id, idempotencyKey: "commit-5" });
+
+  const snapshot = await service.getPolicySnapshot(policy.id, new Date("2026-01-10T00:00:00.000Z"));
+  assert.equal(snapshot.premiums.length, 1);
+  assert.equal(snapshot.premiums[0]?.totalAmount, "321.00");
 });

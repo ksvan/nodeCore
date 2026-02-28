@@ -1,3 +1,4 @@
+import type { PricingResponse } from "@nodecore/contracts/pricing";
 export type JsonObject = Record<string, unknown>;
 
 export type PolicyStatus = "DRAFT" | "ACTIVE" | "RETIRED";
@@ -36,6 +37,9 @@ export interface PolicyTransactionRecord {
   effectiveAt: Date;
   requestId: string | null;
   idempotencyKey: string | null;
+  ratingRequestJson: JsonObject | null;
+  ratingResponseJson: JsonObject | null;
+  ratedAt: Date | null;
   createdAt: Date;
   committedAt: Date | null;
 }
@@ -163,6 +167,12 @@ export interface PolicyRepository {
   listPolicyTransactions(policyId: string): Promise<ReadonlyArray<PolicyTransactionRecord>>;
   getPolicyTransactionById(transactionId: string): Promise<PolicyTransactionRecord | null>;
   commitPolicyTransaction(transactionId: string, committedAt: Date): Promise<PolicyTransactionRecord>;
+  setPolicyTransactionRating(input: {
+    transactionId: string;
+    ratingRequestJson: JsonObject;
+    ratingResponseJson: JsonObject;
+    ratedAt: Date;
+  }): Promise<PolicyTransactionRecord>;
 
   replaceRiskDrafts(input: {
     policyId: string;
@@ -250,6 +260,21 @@ export interface PolicyRepository {
     }>;
   }): Promise<void>;
 
+  createPolicyPremiums(input: {
+    policyId: string;
+    termId: string;
+    createdByTransactionId: string;
+    effectiveFrom: Date;
+    effectiveTo: Date;
+    premiums: ReadonlyArray<{
+      coverageId: string | null;
+      riskId: string | null;
+      totalAmount: string;
+      currency: string;
+      breakdown: JsonObject | null;
+    }>;
+  }): Promise<void>;
+
   getAsOfRisks(policyId: string, asOf: Date): Promise<ReadonlyArray<PolicyRiskRecord>>;
   getAsOfCoverages(policyId: string, asOf: Date): Promise<ReadonlyArray<PolicyCoverageRecord>>;
   getAsOfCoverageTermsByCoverageIds(
@@ -274,4 +299,16 @@ export interface DomainEventPublisher {
     entityId: string;
     data: Record<string, unknown>;
   }): Promise<void>;
+}
+
+export interface PolicyPricingGateway {
+  calculate(input: {
+    requestId?: string;
+    productVersionId: string;
+    policyTransactionId: string;
+    currency?: "SEK" | "DKK" | "EUR" | "GBP" | "USD" | "NOK";
+  }): Promise<{
+    requestId: string;
+    response: PricingResponse;
+  }>;
 }

@@ -61,6 +61,9 @@ const mapPolicyTransaction = (value: PolicyTransaction): PolicyTransactionRecord
   effectiveAt: value.effectiveAt,
   requestId: value.requestId,
   idempotencyKey: value.idempotencyKey,
+  ratingRequestJson: value.ratingRequestJson ? asJsonObject(value.ratingRequestJson) : null,
+  ratingResponseJson: value.ratingResponseJson ? asJsonObject(value.ratingResponseJson) : null,
+  ratedAt: value.ratedAt,
   createdAt: value.createdAt,
   committedAt: value.committedAt,
 });
@@ -283,6 +286,23 @@ export class PrismaPolicyRepository implements PolicyRepository {
     const row = await this.prisma.policyTransaction.update({
       where: { id: transactionId },
       data: { status: "COMMITTED", committedAt },
+    });
+    return mapPolicyTransaction(row);
+  }
+
+  public async setPolicyTransactionRating(input: {
+    transactionId: string;
+    ratingRequestJson: JsonObject;
+    ratingResponseJson: JsonObject;
+    ratedAt: Date;
+  }): Promise<PolicyTransactionRecord> {
+    const row = await this.prisma.policyTransaction.update({
+      where: { id: input.transactionId },
+      data: {
+        ratingRequestJson: toInputJson(input.ratingRequestJson),
+        ratingResponseJson: toInputJson(input.ratingResponseJson),
+        ratedAt: input.ratedAt,
+      },
     });
     return mapPolicyTransaction(row);
   }
@@ -551,6 +571,40 @@ export class PrismaPolicyRepository implements PolicyRepository {
         numberValue: term.numberValue ? new PrismaNamespace.Decimal(term.numberValue) : null,
         stringValue: term.stringValue,
         booleanValue: term.booleanValue,
+        effectiveFrom: input.effectiveFrom,
+        effectiveTo: input.effectiveTo,
+        createdByTransactionId: input.createdByTransactionId,
+      })),
+    });
+  }
+
+  public async createPolicyPremiums(input: {
+    policyId: string;
+    termId: string;
+    createdByTransactionId: string;
+    effectiveFrom: Date;
+    effectiveTo: Date;
+    premiums: ReadonlyArray<{
+      coverageId: string | null;
+      riskId: string | null;
+      totalAmount: string;
+      currency: string;
+      breakdown: JsonObject | null;
+    }>;
+  }): Promise<void> {
+    if (input.premiums.length === 0) {
+      return;
+    }
+
+    await this.prisma.policyPremium.createMany({
+      data: input.premiums.map((premium) => ({
+        policyId: input.policyId,
+        termId: input.termId,
+        coverageId: premium.coverageId,
+        riskId: premium.riskId,
+        totalAmount: new PrismaNamespace.Decimal(premium.totalAmount),
+        currency: premium.currency,
+        ...(premium.breakdown ? { breakdown: toInputJson(premium.breakdown) } : {}),
         effectiveFrom: input.effectiveFrom,
         effectiveTo: input.effectiveTo,
         createdByTransactionId: input.createdByTransactionId,

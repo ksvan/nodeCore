@@ -225,20 +225,25 @@ model PricingProgramVersion {
 model PricingRun {
   id                      String                @id @default(uuid()) @db.Uuid
   requestId               String                @unique
+  policyTransactionId     String?               @db.Uuid
   productVersionId        String                @db.Uuid
   pricingProgramVersionId String                @db.Uuid
+  pricingProgramFileRef   String?
+  pricingProgramFileHash  String?
   requestJson             Json
   responseJson            Json
   occurredAt              DateTime              @default(now())
   durationMs              Int
   currency                CurrencyCode
   success                 Boolean
-  failureReason           String?
+  errorSummary            String?
   productVersion          ProductVersion        @relation(fields: [productVersionId], references: [id], onDelete: Restrict)
   pricingProgramVersion   PricingProgramVersion @relation(fields: [pricingProgramVersionId], references: [id], onDelete: Restrict)
+  policyTransaction       PolicyTransaction?    @relation(fields: [policyTransactionId], references: [id], onDelete: Restrict)
 
   @@index([productVersionId, occurredAt])
   @@index([pricingProgramVersionId, occurredAt])
+  @@index([policyTransactionId, occurredAt])
 }
 
 model Policy {
@@ -287,6 +292,9 @@ model PolicyTransaction {
   effectiveAt    DateTime                @db.Timestamptz(6)
   requestId      String?
   idempotencyKey String?
+  ratingRequestJson Json?
+  ratingResponseJson Json?
+  ratedAt        DateTime?               @db.Timestamptz(6)
   createdAt      DateTime                @default(now()) @db.Timestamptz(6)
   committedAt    DateTime?               @db.Timestamptz(6)
   policy         Policy                  @relation(fields: [policyId], references: [id], onDelete: Restrict)
@@ -295,6 +303,7 @@ model PolicyTransaction {
   coverages      PolicyCoverage[]
   terms          CoverageTerm[]
   premiums       PolicyPremium[]
+  pricingRuns    PricingRun[]
   riskDrafts     PolicyRiskDraft[]
   coverageDrafts PolicyCoverageDraft[]
   termDrafts     CoverageTermDraft[]

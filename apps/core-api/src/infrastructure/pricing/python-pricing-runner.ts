@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import type { PricingRequest } from "@nodecore/contracts/pricing";
 import type { PricingExecutionResult, PricingRunner } from "../../application/pricing/ports/pricing.js";
 
 const sanitizeStderr = (stderr: string): string => {
@@ -16,7 +17,7 @@ const sanitizeStderr = (stderr: string): string => {
 export class PythonPricingRunner implements PricingRunner {
   public async execute(input: {
     fileRef: string;
-    requestJson: Record<string, unknown>;
+    requestJson: PricingRequest;
     timeoutMs: number;
     maxOutputBytes: number;
   }): Promise<PricingExecutionResult> {

@@ -9,6 +9,7 @@ import type {
   CoverageTermValueType,
   DomainEventPublisher,
   JsonObject,
+  PolicyPricingGateway,
   PolicyRepository,
   PolicyRiskType,
   PolicyTransactionType,
@@ -24,6 +25,7 @@ const coverageRefKey = (coverageCode: string, appliesToRiskKey: string | null): 
 export class PolicyService {
   public constructor(
     private readonly repository: PolicyRepository,
+    private readonly pricingGateway: PolicyPricingGateway,
     private readonly eventPublisher: DomainEventPublisher,
   ) {}
 
@@ -420,6 +422,59 @@ export class PolicyService {
     };
   }
 
+  public async rateTransaction(input: {
+    transactionId: string;
+    requestId?: string;
+    currency?: "SEK" | "DKK" | "EUR" | "GBP" | "USD" | "NOK";
+  }): Promise<{
+    transactionId: string;
+    requestId: string;
+    totalPremium: string;
+    currency: string;
+  }> {
+    const tx = await this.requireDraftTransaction(input.transactionId);
+    const policy = await this.repository.getPolicyById(tx.policyId);
+    if (!policy) {
+      throw new PolicyApplicationError("POLICY_NOT_FOUND", "Policy not found", 404);
+    }
+
+    const result = await this.pricingGateway.calculate({
+      ...(input.requestId ? { requestId: input.requestId } : {}),
+      productVersionId: policy.productVersionId,
+      policyTransactionId: tx.id,
+      ...(input.currency ? { currency: input.currency } : {}),
+    });
+
+    await this.repository.setPolicyTransactionRating({
+      transactionId: tx.id,
+      ratingRequestJson: {
+        requestId: result.requestId,
+      },
+      ratingResponseJson: result.response as unknown as JsonObject,
+      ratedAt: new Date(),
+    });
+
+    await this.eventPublisher.publish({
+      eventType: "PolicyTransactionRated",
+      entityType: "PolicyTransaction",
+      entityId: tx.id,
+      data: toEventData({
+        policyId: tx.policyId,
+        transactionId: tx.id,
+        requestId: result.requestId,
+        totalPremium: result.response.totals.totalPremium,
+        currency: result.response.totals.currency,
+      }),
+    });
+
+    return {
+      transactionId: tx.id,
+      requestId: result.requestId,
+      totalPremium: result.response.totals.totalPremium,
+      currency: result.response.totals.currency,
+    };
+  }
+
   public async commitTransaction(input: {
     transactionId: string;
     idempotencyKey: string;
@@ -546,6 +601,32 @@ export class PolicyService {
         };
       }),
     });
+
+    if (tx.ratingResponseJson) {
+      const rating = tx.ratingResponseJson as {
+        totals?: { totalPremium?: string; currency?: string };
+      };
+      const totalPremium = rating.totals?.totalPremium;
+      const currency = rating.totals?.currency;
+      if (totalPremium && currency) {
+        await this.repository.createPolicyPremiums({
+          policyId: policy.id,
+          termId: term.id,
+          createdByTransactionId: tx.id,
+          effectiveFrom: tx.effectiveAt,
+          effectiveTo: term.termEnd,
+          premiums: [
+            {
+              coverageId: null,
+              riskId: null,
+              totalAmount: totalPremium,
+              currency,
+              breakdown: tx.ratingResponseJson,
+            },
+          ],
+        });
+      }
+    }
 
     const committed = await this.repository.commitPolicyTransaction(tx.id, new Date());
     await this.repository.updatePolicyStatus(policy.id, "ACTIVE");

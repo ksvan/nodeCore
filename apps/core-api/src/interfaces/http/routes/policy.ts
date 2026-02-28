@@ -2,8 +2,11 @@ import { z } from "zod";
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { PolicyApplicationError } from "../../../application/policy/services/errors.js";
 import { PolicyService, mapPolicyError } from "../../../application/policy/services/policy-service.js";
+import { PricingService } from "../../../application/pricing/services/pricing-service.js";
 import { getPrismaClient } from "../../../infrastructure/persistence/prisma/client.js";
 import { PrismaPolicyRepository } from "../../../infrastructure/policy/prisma-policy-repository.js";
+import { PrismaPricingRepository } from "../../../infrastructure/pricing/prisma-pricing-repository.js";
+import { PythonPricingRunner } from "../../../infrastructure/pricing/python-pricing-runner.js";
 import { WsDomainEventPublisher } from "../../ws/ws-domain-event-publisher.js";
 
 const JsonObjectSchema = z.record(z.unknown());
@@ -39,7 +42,33 @@ const sendError = (reply: FastifyReply, error: unknown): void => {
 
 export const registerPolicyRoutes = async (app: FastifyInstance): Promise<void> => {
   const repository = new PrismaPolicyRepository(getPrismaClient());
-  const service = new PolicyService(repository, new WsDomainEventPublisher());
+  const pricingService = new PricingService(
+    new PrismaPricingRepository(getPrismaClient()),
+    new PythonPricingRunner(),
+    new WsDomainEventPublisher(),
+  );
+  const pricingGateway = {
+    calculate: async (input: {
+      requestId?: string;
+      productVersionId: string;
+      policyTransactionId: string;
+      currency?: "SEK" | "DKK" | "EUR" | "GBP" | "USD" | "NOK";
+    }) => {
+      const result = await pricingService.calculate(input);
+      return {
+        requestId: result.requestId,
+        response: {
+          schemaVersion: result.response.schemaVersion,
+          requestId: result.response.requestId,
+          resultVersion: result.response.resultVersion,
+          totals: result.response.totals,
+          errors: [...result.response.errors],
+          ...(result.response.breakdown ? { breakdown: [...result.response.breakdown] } : {}),
+        },
+      };
+    },
+  };
+  const service = new PolicyService(repository, pricingGateway, new WsDomainEventPublisher());
 
   app.post(
     "/v1/policies",
@@ -277,6 +306,31 @@ export const registerPolicyRoutes = async (app: FastifyInstance): Promise<void> 
           })),
         });
         return reply.code(204).send();
+      } catch (error: unknown) {
+        sendError(reply, error);
+      }
+    },
+  );
+
+  app.post(
+    "/v1/policy-transactions/:transactionId/rate",
+    { preHandler: app.authenticate },
+    async (request, reply) => {
+      const params = z.object({ transactionId: z.string().uuid() }).parse(request.params);
+      const body = z
+        .object({
+          requestId: z.string().uuid().optional(),
+          currency: z.enum(["SEK", "DKK", "EUR", "GBP", "USD", "NOK"]).optional(),
+        })
+        .default({})
+        .parse(request.body ?? {});
+      try {
+        const result = await service.rateTransaction({
+          transactionId: params.transactionId,
+          ...(body.requestId ? { requestId: body.requestId } : {}),
+          ...(body.currency ? { currency: body.currency } : {}),
+        });
+        return reply.send(result);
       } catch (error: unknown) {
         sendError(reply, error);
       }
