@@ -12,6 +12,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 * Planned: MCP interface for package metadata and API exposure to agents.
 * Planned: Sidecar AI agent integration (LangGraph) with selectable LLM.
 
+## [0.4.1] - 2026-02-28
+
+### Added
+
+* New authenticated WebSocket endpoint: `/ws/business-events` in `core-api`.
+* Curated business-event stream using explicit allow-list event types while keeping `/ws/events` unchanged.
+* Best-effort subscribe-message filters for business events (`eventTypes`, `entityTypes`, `entityIds`, `sinceOccurredAt`).
+* New Ops page in channel UI: `/ops/business-events`.
+* Shared `EventStreamViewer` component for Ops event feeds to avoid duplication between `/ops/events` and `/ops/business-events`.
+
+### Changed
+
+* Business-events WebSocket authentication supports both `Authorization: Bearer` and `nodecore_access_token` cookie for browser UI usage.
+* Ops navigation now includes Business Events.
+
 ## [0.4.0] - 2026-02-28
 
 ### Added

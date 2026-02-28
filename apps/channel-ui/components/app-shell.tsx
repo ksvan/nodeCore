@@ -51,6 +51,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Item href="/ops/search" label="Global Search" pathname={pathname} />
         <Item href="/ops/audit" label="Audit" pathname={pathname} />
         <Item href="/ops/events" label="Events" pathname={pathname} />
+        <Item href="/ops/business-events" label="Business Events" pathname={pathname} />
         <Item href="/ops/integrations" label="Integrations" pathname={pathname} />
 
         <div style={{ marginTop: 20 }}>

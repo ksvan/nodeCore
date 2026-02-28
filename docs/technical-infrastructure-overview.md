@@ -8,7 +8,7 @@ This document explains the technical setup of `nodeCore` in simple terms.
 - API framework: Fastify
 - Database: PostgreSQL
 - ORM: Prisma
-- Realtime events: WebSocket (`/ws/events`)
+- Realtime events: WebSocket (`/ws/events`, `/ws/business-events`)
 - Validation: Zod
 - Logging: Pino (structured logs)
 - Package manager: pnpm
@@ -71,6 +71,7 @@ Current `channel-ui` scope:
 - Product Management UI (products, components, pricing programs).
 - Policy UI (list/search, new business creation, transaction workspace, endorsement flow, as-of snapshots).
 - Billing UI (accounts, invoices, payments, allocations, and policy-financial links).
+- Ops UI (global search, events stream, business-events stream, and placeholders for audit/integration tools).
 
 ## Security and reliability basics
 
