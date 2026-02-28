@@ -26,4 +26,4 @@ cleanup() {
 
 trap cleanup EXIT INT TERM
 
-wait -n "$CORE_API_PID" "$CHANNEL_UI_PID"
+wait "$CORE_API_PID" "$CHANNEL_UI_PID"

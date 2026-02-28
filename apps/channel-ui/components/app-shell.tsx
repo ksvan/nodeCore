@@ -28,7 +28,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <aside className="sidebar">
         <h2 style={{ marginTop: 0 }}>nodeCore UI</h2>
         <p className="muted" style={{ marginTop: 0 }}>
-          Channel app (UI-1)
+          Channel app
         </p>
 
         <h4>Product Management</h4>
@@ -46,6 +46,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Item href="/billing/accounts" label="Accounts" pathname={pathname} />
         <Item href="/billing/invoices" label="Invoices" pathname={pathname} />
         <Item href="/billing/payments" label="Payments" pathname={pathname} />
+
+        <h4 style={{ marginTop: 20 }}>Ops</h4>
+        <Item href="/ops/search" label="Global Search" pathname={pathname} />
+        <Item href="/ops/audit" label="Audit" pathname={pathname} />
+        <Item href="/ops/events" label="Events" pathname={pathname} />
+        <Item href="/ops/integrations" label="Integrations" pathname={pathname} />
 
         <div style={{ marginTop: 20 }}>
           <Link href="/logout" className="muted">
