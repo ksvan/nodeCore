@@ -12,8 +12,8 @@ const Item = ({ href, label, pathname }: { href: string; label: string; pathname
       padding: "8px 10px",
       borderRadius: 8,
       marginBottom: 4,
-      background: pathname === href ? "var(--brand-soft)" : "transparent",
-      fontWeight: pathname === href ? 700 : 400,
+      background: pathname.startsWith(href) ? "var(--brand-soft)" : "transparent",
+      fontWeight: pathname.startsWith(href) ? 700 : 400,
     }}
   >
     {label}
@@ -39,7 +39,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Item href="/product-management/pricing-programs" label="Pricing Programs" pathname={pathname} />
 
         <h4 style={{ marginTop: 20 }}>Policy</h4>
-        <Item href="/policy" label="Policy (placeholder)" pathname={pathname} />
+        <Item href="/policy/policies" label="Policies" pathname={pathname} />
+        <Item href="/policy/create" label="Create New Business" pathname={pathname} />
 
         <h4 style={{ marginTop: 20 }}>Billing</h4>
         <Item href="/billing" label="Billing (placeholder)" pathname={pathname} />

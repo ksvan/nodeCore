@@ -60,6 +60,9 @@ Why this matters: it keeps business logic independent from frameworks and easier
 - UI calls core APIs (REST) and can listen to `/ws/events`.
 - Login uses `/auth/login` via a UI proxy route that stores JWT in an httpOnly cookie.
 - Protected pages forward auth to core through API proxy handlers.
+- Current UI modules:
+  - Product Management workspace (UI-1).
+  - Policy Workspace (UI-2): policy list/search, NB + endorsement draft flows, transaction editing (risks/coverages/terms), rate/commit, and as-of snapshot view.
 
 ## For new contributors
 

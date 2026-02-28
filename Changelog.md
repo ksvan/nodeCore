@@ -12,6 +12,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 * Planned: MCP interface for package metadata and API exposure to agents.
 * Planned: Sidecar AI agent integration (LangGraph) with selectable LLM.
 * Root demo startup script (`demo-start.sh` / `pnpm demo:start`) to run `core-api` and `channel-ui` together for local demos.
+* UI-2 Policy Workspace in `apps/channel-ui`:
+  - Policy search/list page.
+  - New Business creation flow (policy + NB draft transaction).
+  - Transaction workspace for draft risks, coverages, and coverage terms (replace semantics), plus validate/rate/commit actions.
+  - Policy detail page with transaction list, as-of snapshot viewer, and endorsement draft creation.
+
+### Changed
+
+* Channel UI policy navigation now links directly to policy list and NB creation routes.
+* Policy UI explicitly documents backend contract gap: no draft read endpoint for risks/coverages/terms, so client prefill after reload is limited.
 
 ## [0.3.0] - 2026-02-28
 

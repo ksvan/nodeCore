@@ -65,6 +65,12 @@ This starts:
 - `core-api` at `http://localhost:4000`
 - `channel-ui` at `http://localhost:3000`
 
+Current `channel-ui` scope:
+
+- Login/logout + protected routing (cookie/JWT proxy pattern).
+- Product Management UI (products, components, pricing programs).
+- Policy UI (list/search, new business creation, transaction workspace, endorsement flow, as-of snapshots).
+
 ## Security and reliability basics
 
 - JWT auth is required for API endpoints.

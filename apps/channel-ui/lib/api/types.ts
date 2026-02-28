@@ -122,3 +122,116 @@ export interface AuthLoginResponse {
     roles: ReadonlyArray<string>;
   };
 }
+
+export type PolicyRiskType = "VEHICLE" | "PROPERTY" | "LOCATION" | "PERSON" | "OTHER";
+export type CoverageTermValueType = "MONEY" | "NUMBER" | "STRING" | "BOOLEAN";
+export type PolicyTransactionType = "NEW_BUSINESS" | "ENDORSEMENT";
+export type PolicyTransactionStatus = "DRAFT" | "COMMITTED";
+
+export interface PolicyListItemDto {
+  id: string;
+  policyNumber: string;
+  status: string;
+  productId: string;
+  productVersionId: string;
+  createdAt: string;
+}
+
+export interface PolicyDto {
+  id: string;
+  policyNumber: string;
+  status: string;
+  productId: string;
+  productVersionId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PolicyTransactionDto {
+  id: string;
+  policyId: string;
+  termId: string;
+  type: PolicyTransactionType;
+  status: PolicyTransactionStatus;
+  effectiveAt: string;
+  createdAt: string;
+  committedAt: string | null;
+}
+
+export interface PolicySnapshotDto {
+  policy: {
+    id: string;
+    policyNumber: string;
+    status: string;
+    productId: string;
+    productVersionId: string;
+  };
+  term: {
+    id: string;
+    termStart: string;
+    termEnd: string;
+    status: string;
+  } | null;
+  asOf: string;
+  risks: ReadonlyArray<{
+    id: string;
+    riskType: PolicyRiskType;
+    riskKey: string | null;
+    attributes: Record<string, unknown>;
+    effectiveFrom: string;
+    effectiveTo: string;
+  }>;
+  coverages: ReadonlyArray<{
+    id: string;
+    coverageCode: string;
+    appliesToRiskId: string | null;
+    attributes: Record<string, unknown>;
+    effectiveFrom: string;
+    effectiveTo: string;
+    terms: ReadonlyArray<{
+      id: string;
+      termCode: string;
+      valueType: CoverageTermValueType;
+      moneyAmount: string | null;
+      moneyCurrency: string | null;
+      numberValue: string | null;
+      stringValue: string | null;
+      booleanValue: boolean | null;
+      effectiveFrom: string;
+      effectiveTo: string;
+    }>;
+  }>;
+  premiums: ReadonlyArray<{
+    id: string;
+    coverageId: string | null;
+    riskId: string | null;
+    totalAmount: string;
+    currency: string;
+    breakdown: Record<string, unknown> | null;
+    effectiveFrom: string;
+    effectiveTo: string;
+  }>;
+  financials: {
+    policyId: string;
+    asOf: string;
+    outstandingObligations: ReadonlyArray<{
+      id: string;
+      policyTransactionId: string;
+      termId: string;
+      billingAccountId: string | null;
+      amount: string;
+      currency: string;
+      dueDate: string;
+      status: string;
+    }>;
+    linkedInvoices: ReadonlyArray<{
+      obligationId: string;
+      invoiceId: string;
+      invoiceNumber: string;
+      status: string;
+      invoiceTotal: string;
+      amountPaid: string;
+    }>;
+    paidAmount: string;
+  } | null;
+}
