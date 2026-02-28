@@ -121,7 +121,6 @@ export class PricingService {
     }
 
     const filePath = resolveProgramFilePath(context.pricingProgramFileRef);
-    const fileHash = await ensureFileAndHash(filePath);
 
     const timeoutMs = Number.parseInt(process.env.PRICING_TIMEOUT_MS ?? "3000", 10);
     const maxOutputBytes = Number.parseInt(process.env.PRICING_MAX_STDOUT_BYTES ?? `${1024 * 1024}`, 10);
@@ -130,8 +129,10 @@ export class PricingService {
     let durationMs = 0;
     let response: JsonObject = {};
     let errorSummary: string | null = null;
+    let fileHash: string | null = null;
 
     try {
+      fileHash = await ensureFileAndHash(filePath);
       const execution = await this.runner.execute({
         fileRef: filePath,
         requestJson: request,
@@ -244,6 +245,9 @@ export class PricingService {
 
       if (error instanceof PricingDomainError) {
         throw new PricingApplicationError(error.message, 400);
+      }
+      if (error instanceof PricingApplicationError) {
+        throw error;
       }
       throw new PricingApplicationError("Pricing execution failed", 500);
     }

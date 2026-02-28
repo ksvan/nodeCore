@@ -11,6 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 * Planned: Node-RED nodes for consuming WebSocket events and calling nodeCore APIs.
 * Planned: MCP interface for package metadata and API exposure to agents.
 * Planned: Sidecar AI agent integration (LangGraph) with selectable LLM.
+* Policy ↔ Billing integration with `BillingObligation` records created from committed transaction premium deltas (including negative credits on reductions).
+* Billing endpoint `POST /v1/billing/obligations/{obligationId}/invoice` for invoice generation directly from policy obligations.
+* Optional policy snapshot financial view (`includeFinancials`) returning obligations, linked invoices, and paid totals.
+* New domain events: `BillingObligationCreated`, `InvoiceGeneratedFromPolicy`, and `PolicyFinancialPositionChanged`.
 
 ## [0.2.x] - 2026-02-28
 

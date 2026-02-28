@@ -312,3 +312,40 @@ export interface PolicyPricingGateway {
     response: PricingResponse;
   }>;
 }
+
+export interface PolicyBillingGateway {
+  createObligationFromPremiumDelta(input: {
+    policyId: string;
+    policyTransactionId: string;
+    termId: string;
+    amount: string;
+    currency: "SEK" | "DKK" | "EUR" | "GBP" | "USD" | "NOK";
+    dueDate: Date;
+  }): Promise<void>;
+  getFinancialPosition(input: {
+    policyId: string;
+    asOf: Date;
+  }): Promise<{
+    policyId: string;
+    asOf: string;
+    outstandingObligations: ReadonlyArray<{
+      id: string;
+      policyTransactionId: string;
+      termId: string;
+      billingAccountId: string | null;
+      amount: string;
+      currency: string;
+      dueDate: string;
+      status: string;
+    }>;
+    linkedInvoices: ReadonlyArray<{
+      obligationId: string;
+      invoiceId: string;
+      invoiceNumber: string;
+      status: string;
+      invoiceTotal: string;
+      amountPaid: string;
+    }>;
+    paidAmount: string;
+  }>;
+}

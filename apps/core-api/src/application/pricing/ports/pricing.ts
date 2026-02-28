@@ -57,7 +57,7 @@ export interface PricingRepository {
     productVersionId: string;
     pricingProgramVersionId: string;
     pricingProgramFileRef: string;
-    pricingProgramFileHash: string;
+    pricingProgramFileHash: string | null;
     requestJson: JsonObject;
     responseJson: JsonObject;
     durationMs: number;

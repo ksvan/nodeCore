@@ -5,6 +5,7 @@ import { BillingDomainError } from "../../../domain/billing/errors.js";
 import { BillingService } from "./billing-service.js";
 import type {
   BillingAccountRecord,
+  BillingObligationRecord,
   BillingRepository,
   DomainEventPublisher,
   InvoiceLineRecord,
@@ -37,6 +38,7 @@ class InMemoryBillingRepository implements BillingRepository {
   private readonly invoiceLines = new Map<string, InvoiceLineRecord>();
   private readonly payments = new Map<string, PaymentRecord>();
   private readonly paymentAllocations = new Map<string, PaymentAllocationRecord>();
+  private readonly obligations = new Map<string, BillingObligationRecord>();
   private readonly idempotency = new Map<string, JsonObject>();
   private invoiceSequence = 0;
 
@@ -81,6 +83,7 @@ class InMemoryBillingRepository implements BillingRepository {
       quantity: string;
       unitAmount: string;
       lineTotal: string;
+      billingObligationId?: string | null;
     }>;
   }): Promise<{ invoice: InvoiceRecord; lines: ReadonlyArray<InvoiceLineRecord> }> {
     const now = new Date();
@@ -102,6 +105,7 @@ class InMemoryBillingRepository implements BillingRepository {
       const row: InvoiceLineRecord = {
         id: randomUUID(),
         invoiceId: invoice.id,
+        billingObligationId: line.billingObligationId ?? null,
         description: line.description,
         quantity: line.quantity,
         unitAmount: line.unitAmount,
@@ -215,6 +219,95 @@ class InMemoryBillingRepository implements BillingRepository {
     invoiceId: string,
   ): Promise<ReadonlyArray<PaymentAllocationRecord>> {
     return [...this.paymentAllocations.values()].filter((row) => row.invoiceId === invoiceId);
+  }
+
+  public async createBillingObligation(input: {
+    policyId: string;
+    policyTransactionId: string;
+    termId: string;
+    billingAccountId: string | null;
+    amount: string;
+    currency: "SEK" | "DKK" | "EUR" | "GBP" | "USD" | "NOK";
+    dueDate: Date;
+  }): Promise<BillingObligationRecord> {
+    const row: BillingObligationRecord = {
+      id: randomUUID(),
+      policyId: input.policyId,
+      policyTransactionId: input.policyTransactionId,
+      termId: input.termId,
+      billingAccountId: input.billingAccountId,
+      amount: input.amount,
+      currency: input.currency,
+      dueDate: input.dueDate,
+      status: "OPEN",
+      createdAt: new Date(),
+    };
+    this.obligations.set(row.id, row);
+    return row;
+  }
+
+  public async getBillingObligationById(obligationId: string): Promise<BillingObligationRecord | null> {
+    return this.obligations.get(obligationId) ?? null;
+  }
+
+  public async updateBillingObligation(input: {
+    obligationId: string;
+    status?: BillingObligationRecord["status"];
+    billingAccountId?: string | null;
+  }): Promise<BillingObligationRecord> {
+    const row = this.obligations.get(input.obligationId);
+    if (!row) {
+      throw new Error("obligation not found");
+    }
+    const updated: BillingObligationRecord = {
+      ...row,
+      ...(input.status ? { status: input.status } : {}),
+      ...(Object.prototype.hasOwnProperty.call(input, "billingAccountId")
+        ? { billingAccountId: input.billingAccountId ?? null }
+        : {}),
+    };
+    this.obligations.set(updated.id, updated);
+    return updated;
+  }
+
+  public async listBillingObligationsByPolicy(
+    policyId: string,
+    asOf: Date,
+  ): Promise<
+    ReadonlyArray<
+      BillingObligationRecord & {
+        invoices: ReadonlyArray<{
+          invoiceId: string;
+          invoiceNumber: string;
+          invoiceStatus: InvoiceRecord["status"];
+          invoiceTotal: string;
+          amountPaid: string;
+        }>;
+      }
+    >
+  > {
+    const obligations = [...this.obligations.values()].filter(
+      (row) => row.policyId === policyId && row.createdAt <= asOf,
+    );
+    return obligations.map((obligation) => {
+      const obligationLines = [...this.invoiceLines.values()].filter(
+        (line) => line.billingObligationId === obligation.id,
+      );
+      const invoices = obligationLines
+        .map((line) => this.invoices.get(line.invoiceId))
+        .filter((invoice): invoice is InvoiceRecord => invoice !== undefined)
+        .map((invoice) => ({
+          invoiceId: invoice.id,
+          invoiceNumber: invoice.invoiceNumber,
+          invoiceStatus: invoice.status,
+          invoiceTotal: invoice.totalAmount,
+          amountPaid: [...this.paymentAllocations.values()]
+            .filter((allocation) => allocation.invoiceId === invoice.id)
+            .reduce((sum, allocation) => sum + Number.parseFloat(allocation.amount), 0)
+            .toFixed(2),
+        }));
+      return { ...obligation, invoices };
+    });
   }
 
   public async getIdempotency(scope: string, key: string): Promise<JsonObject | null> {
@@ -335,4 +428,53 @@ test("idempotency key prevents duplicate invoice creation", async () => {
 
   assert.equal(first.id, second.id);
   assert.equal(repository.invoices.size, 1);
+});
+
+test("invoice generation from obligation links invoice and updates obligation status", async () => {
+  const repository = new InMemoryBillingRepository();
+  const service = new BillingService(repository, new InMemoryDomainEventPublisher());
+  const account = await service.createBillingAccount({ partyId: randomUUID() });
+  const obligation = await service.createPolicyObligation({
+    policyId: randomUUID(),
+    policyTransactionId: randomUUID(),
+    termId: randomUUID(),
+    amount: "100.00",
+    currency: "SEK",
+    dueDate: new Date("2026-04-01T00:00:00.000Z"),
+    billingAccountId: account.id,
+  });
+
+  const invoice = await service.generateInvoiceFromObligation({
+    obligationId: obligation.id,
+    dueDate: new Date("2026-04-05T00:00:00.000Z"),
+    idempotencyKey: "obligation-invoice-1",
+  });
+
+  assert.equal(invoice.invoiceTotal, "100.00");
+  assert.equal(repository.invoices.size, 1);
+  assert.equal((await repository.getBillingObligationById(obligation.id))?.status, "INVOICED");
+});
+
+test("negative billing obligation can be invoiced as credit", async () => {
+  const repository = new InMemoryBillingRepository();
+  const service = new BillingService(repository, new InMemoryDomainEventPublisher());
+  const account = await service.createBillingAccount({ partyId: randomUUID() });
+  const obligation = await service.createPolicyObligation({
+    policyId: randomUUID(),
+    policyTransactionId: randomUUID(),
+    termId: randomUUID(),
+    amount: "-25.00",
+    currency: "SEK",
+    dueDate: new Date("2026-04-01T00:00:00.000Z"),
+    billingAccountId: account.id,
+  });
+
+  const invoice = await service.generateInvoiceFromObligation({
+    obligationId: obligation.id,
+    dueDate: new Date("2026-04-05T00:00:00.000Z"),
+    idempotencyKey: "obligation-invoice-negative-1",
+  });
+
+  assert.equal(invoice.invoiceTotal, "-25.00");
+  assert.equal((await repository.getBillingObligationById(obligation.id))?.status, "INVOICED");
 });

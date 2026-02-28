@@ -9,6 +9,7 @@ import type {
   CoverageTermValueType,
   DomainEventPublisher,
   JsonObject,
+  PolicyBillingGateway,
   PolicyPricingGateway,
   PolicyRepository,
   PolicyRiskType,
@@ -22,11 +23,33 @@ const toEventData = (value: unknown): Record<string, unknown> =>
 const coverageRefKey = (coverageCode: string, appliesToRiskKey: string | null): string =>
   `${coverageCode}::${appliesToRiskKey ?? ""}`;
 
+const moneyPattern = /^-?\d+(\.\d{1,2})?$/;
+
+const moneyToMinor = (amount: string): bigint => {
+  if (!moneyPattern.test(amount)) {
+    throw new PolicyApplicationError("INVALID_MONEY_AMOUNT", "Invalid money amount format", 400);
+  }
+  const negative = amount.startsWith("-");
+  const raw = negative ? amount.slice(1) : amount;
+  const [wholePart, fraction = ""] = raw.split(".");
+  const minor = BigInt(wholePart ?? "0") * 100n + BigInt(`${fraction}00`.slice(0, 2));
+  return negative ? -minor : minor;
+};
+
+const minorToMoney = (value: bigint): string => {
+  const negative = value < 0n;
+  const absolute = negative ? -value : value;
+  const whole = absolute / 100n;
+  const fraction = absolute % 100n;
+  return `${negative ? "-" : ""}${whole.toString()}.${fraction.toString().padStart(2, "0")}`;
+};
+
 export class PolicyService {
   public constructor(
     private readonly repository: PolicyRepository,
     private readonly pricingGateway: PolicyPricingGateway,
     private readonly eventPublisher: DomainEventPublisher,
+    private readonly billingGateway?: PolicyBillingGateway,
   ) {}
 
   public async createPolicy(input: {
@@ -424,7 +447,7 @@ export class PolicyService {
 
   public async rateTransaction(input: {
     transactionId: string;
-    requestId?: string;
+    requestId: string;
     currency?: "SEK" | "DKK" | "EUR" | "GBP" | "USD" | "NOK";
   }): Promise<{
     transactionId: string;
@@ -439,7 +462,7 @@ export class PolicyService {
     }
 
     const result = await this.pricingGateway.calculate({
-      ...(input.requestId ? { requestId: input.requestId } : {}),
+      requestId: input.requestId,
       productVersionId: policy.productVersionId,
       policyTransactionId: tx.id,
       ...(input.currency ? { currency: input.currency } : {}),
@@ -512,6 +535,24 @@ export class PolicyService {
         `Transaction validation failed: ${validation.issues.join("; ")}`,
         400,
       );
+    }
+
+    const priorPremiums = await this.repository.getAsOfPremiums(
+      policy.id,
+      new Date(tx.effectiveAt.getTime() - 1),
+    );
+    let priorPremiumCurrency: string | null = null;
+    let priorPremiumTotalMinor = 0n;
+    for (const premium of priorPremiums) {
+      if (priorPremiumCurrency && priorPremiumCurrency !== premium.currency) {
+        throw new PolicyApplicationError(
+          "MULTI_CURRENCY_POLICY_PREMIUM_NOT_SUPPORTED",
+          "Premium delta calculation requires a single premium currency",
+          400,
+        );
+      }
+      priorPremiumCurrency = premium.currency;
+      priorPremiumTotalMinor += moneyToMinor(premium.totalAmount);
     }
 
     const riskDrafts = await this.repository.listRiskDrafts(tx.id);
@@ -602,6 +643,8 @@ export class PolicyService {
       }),
     });
 
+    let committedPremiumCurrency: string | null = null;
+    let committedPremiumTotalMinor = 0n;
     if (tx.ratingResponseJson) {
       const rating = tx.ratingResponseJson as {
         totals?: { totalPremium?: string; currency?: string };
@@ -609,6 +652,8 @@ export class PolicyService {
       const totalPremium = rating.totals?.totalPremium;
       const currency = rating.totals?.currency;
       if (totalPremium && currency) {
+        committedPremiumCurrency = currency;
+        committedPremiumTotalMinor = moneyToMinor(totalPremium);
         await this.repository.createPolicyPremiums({
           policyId: policy.id,
           termId: term.id,
@@ -631,6 +676,28 @@ export class PolicyService {
     const committed = await this.repository.commitPolicyTransaction(tx.id, new Date());
     await this.repository.updatePolicyStatus(policy.id, "ACTIVE");
     await this.repository.updatePolicyTermStatus(term.id, "ACTIVE");
+
+    if (this.billingGateway && committedPremiumCurrency) {
+      if (priorPremiumCurrency && priorPremiumCurrency !== committedPremiumCurrency) {
+        throw new PolicyApplicationError(
+          "PREMIUM_CURRENCY_MISMATCH",
+          "Premium currency mismatch between prior and committed premiums",
+          400,
+        );
+      }
+
+      const obligationDeltaMinor = committedPremiumTotalMinor - priorPremiumTotalMinor;
+      if (obligationDeltaMinor !== 0n) {
+        await this.billingGateway.createObligationFromPremiumDelta({
+          policyId: policy.id,
+          policyTransactionId: tx.id,
+          termId: term.id,
+          amount: minorToMoney(obligationDeltaMinor),
+          currency: committedPremiumCurrency as "SEK" | "DKK" | "EUR" | "GBP" | "USD" | "NOK",
+          dueDate: tx.effectiveAt,
+        });
+      }
+    }
 
     const dto = {
       policyId: committed.policyId,
@@ -663,7 +730,7 @@ export class PolicyService {
     return dto;
   }
 
-  public async getPolicySnapshot(policyId: string, asOf: Date): Promise<{
+  public async getPolicySnapshot(policyId: string, asOf: Date, includeFinancials = false): Promise<{
     policy: {
       id: string;
       policyNumber: string;
@@ -716,6 +783,29 @@ export class PolicyService {
       effectiveFrom: string;
       effectiveTo: string;
     }>;
+    financials: {
+      policyId: string;
+      asOf: string;
+      outstandingObligations: ReadonlyArray<{
+        id: string;
+        policyTransactionId: string;
+        termId: string;
+        billingAccountId: string | null;
+        amount: string;
+        currency: string;
+        dueDate: string;
+        status: string;
+      }>;
+      linkedInvoices: ReadonlyArray<{
+        obligationId: string;
+        invoiceId: string;
+        invoiceNumber: string;
+        status: string;
+        invoiceTotal: string;
+        amountPaid: string;
+      }>;
+      paidAmount: string;
+    } | null;
   }> {
     const policy = await this.repository.getPolicyById(policyId);
     if (!policy) {
@@ -730,6 +820,9 @@ export class PolicyService {
       asOf,
     );
     const premiums = await this.repository.getAsOfPremiums(policy.id, asOf);
+    const financials = includeFinancials && this.billingGateway
+      ? await this.billingGateway.getFinancialPosition({ policyId: policy.id, asOf })
+      : null;
 
     return {
       policy: {
@@ -788,6 +881,7 @@ export class PolicyService {
         effectiveFrom: premium.effectiveFrom.toISOString(),
         effectiveTo: premium.effectiveTo.toISOString(),
       })),
+      financials,
     };
   }
 

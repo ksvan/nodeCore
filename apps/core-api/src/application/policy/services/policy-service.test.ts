@@ -7,6 +7,7 @@ import type {
   CoverageTermRecord,
   DomainEventPublisher,
   JsonObject,
+  PolicyBillingGateway,
   PolicyCoverageDraftRecord,
   PolicyCoverageRecord,
   PolicyPremiumRecord,
@@ -26,6 +27,63 @@ class InMemoryEventPublisher implements DomainEventPublisher {
     data: Record<string, unknown>;
   }): Promise<void> {
     void input;
+  }
+}
+
+class InMemoryPolicyBillingGateway implements PolicyBillingGateway {
+  public readonly obligations: Array<{
+    policyId: string;
+    policyTransactionId: string;
+    termId: string;
+    amount: string;
+    currency: "SEK" | "DKK" | "EUR" | "GBP" | "USD" | "NOK";
+    dueDate: Date;
+  }> = [];
+
+  public async createObligationFromPremiumDelta(input: {
+    policyId: string;
+    policyTransactionId: string;
+    termId: string;
+    amount: string;
+    currency: "SEK" | "DKK" | "EUR" | "GBP" | "USD" | "NOK";
+    dueDate: Date;
+  }): Promise<void> {
+    this.obligations.push(input);
+  }
+
+  public async getFinancialPosition(input: {
+    policyId: string;
+    asOf: Date;
+  }): Promise<{
+    policyId: string;
+    asOf: string;
+    outstandingObligations: readonly {
+      id: string;
+      policyTransactionId: string;
+      termId: string;
+      billingAccountId: string | null;
+      amount: string;
+      currency: string;
+      dueDate: string;
+      status: string;
+    }[];
+    linkedInvoices: readonly {
+      obligationId: string;
+      invoiceId: string;
+      invoiceNumber: string;
+      status: string;
+      invoiceTotal: string;
+      amountPaid: string;
+    }[];
+    paidAmount: string;
+  }> {
+    return {
+      policyId: input.policyId,
+      asOf: input.asOf.toISOString(),
+      outstandingObligations: [],
+      linkedInvoices: [],
+      paidAmount: "0.00",
+    };
   }
 }
 
@@ -839,4 +897,125 @@ test("rating stores premium and commit creates effective-dated PolicyPremium row
   const snapshot = await service.getPolicySnapshot(policy.id, new Date("2026-01-10T00:00:00.000Z"));
   assert.equal(snapshot.premiums.length, 1);
   assert.equal(snapshot.premiums[0]?.totalAmount, "321.00");
+});
+
+test("new business commit creates billing obligation for premium total", async () => {
+  const billingGateway = new InMemoryPolicyBillingGateway();
+  const service = new PolicyService(
+    new InMemoryPolicyRepository(),
+    {
+      calculate: async () => ({
+        requestId: randomUUID(),
+        response: {
+          schemaVersion: "v1",
+          requestId: randomUUID(),
+          resultVersion: "test",
+          totals: { totalPremium: "450.00", currency: "SEK" },
+          errors: [],
+        },
+      }),
+    },
+    new InMemoryEventPublisher(),
+    billingGateway,
+  );
+
+  const policy = await service.createPolicy({
+    policyNumber: "P-006",
+    productId: randomUUID(),
+    productVersionId: randomUUID(),
+    termStart: new Date("2026-01-01T00:00:00.000Z"),
+    termEnd: new Date("2027-01-01T00:00:00.000Z"),
+    idempotencyKey: "create-policy-6",
+  });
+  const tx = await service.createTransaction({
+    policyId: policy.id,
+    type: "NEW_BUSINESS",
+    effectiveAt: new Date("2026-01-01T00:00:00.000Z"),
+    requestId: randomUUID(),
+    idempotencyKey: "tx-6",
+  });
+  await service.replaceTransactionRisks({
+    transactionId: tx.id,
+    risks: [{ riskType: "VEHICLE", riskKey: "OBL-1", attributes: {} }],
+  });
+  await service.replaceTransactionCoverages({
+    transactionId: tx.id,
+    coverages: [{ coverageCode: "CASCO", appliesToRiskKey: "OBL-1", attributes: {} }],
+  });
+  await service.rateTransaction({ transactionId: tx.id, requestId: randomUUID() });
+  await service.commitTransaction({ transactionId: tx.id, idempotencyKey: "commit-6" });
+
+  assert.equal(billingGateway.obligations.length, 1);
+  assert.equal(billingGateway.obligations[0]?.amount, "450.00");
+});
+
+test("endorsement premium reduction creates negative billing obligation", async () => {
+  const billingGateway = new InMemoryPolicyBillingGateway();
+  let premium = "300.00";
+  const service = new PolicyService(
+    new InMemoryPolicyRepository(),
+    {
+      calculate: async () => ({
+        requestId: randomUUID(),
+        response: {
+          schemaVersion: "v1",
+          requestId: randomUUID(),
+          resultVersion: "test",
+          totals: { totalPremium: premium, currency: "SEK" },
+          errors: [],
+        },
+      }),
+    },
+    new InMemoryEventPublisher(),
+    billingGateway,
+  );
+
+  const policy = await service.createPolicy({
+    policyNumber: "P-007",
+    productId: randomUUID(),
+    productVersionId: randomUUID(),
+    termStart: new Date("2026-01-01T00:00:00.000Z"),
+    termEnd: new Date("2027-01-01T00:00:00.000Z"),
+    idempotencyKey: "create-policy-7",
+  });
+  const nb = await service.createTransaction({
+    policyId: policy.id,
+    type: "NEW_BUSINESS",
+    effectiveAt: new Date("2026-01-01T00:00:00.000Z"),
+    requestId: randomUUID(),
+    idempotencyKey: "tx-7-nb",
+  });
+  await service.replaceTransactionRisks({
+    transactionId: nb.id,
+    risks: [{ riskType: "VEHICLE", riskKey: "NEG-1", attributes: {} }],
+  });
+  await service.replaceTransactionCoverages({
+    transactionId: nb.id,
+    coverages: [{ coverageCode: "CASCO", appliesToRiskKey: "NEG-1", attributes: {} }],
+  });
+  await service.rateTransaction({ transactionId: nb.id, requestId: randomUUID() });
+  await service.commitTransaction({ transactionId: nb.id, idempotencyKey: "commit-7-nb" });
+
+  premium = "200.00";
+  const endorsement = await service.createTransaction({
+    policyId: policy.id,
+    type: "ENDORSEMENT",
+    effectiveAt: new Date("2026-05-01T00:00:00.000Z"),
+    requestId: randomUUID(),
+    idempotencyKey: "tx-7-end",
+  });
+  await service.replaceTransactionRisks({
+    transactionId: endorsement.id,
+    risks: [{ riskType: "VEHICLE", riskKey: "NEG-2", attributes: {} }],
+  });
+  await service.replaceTransactionCoverages({
+    transactionId: endorsement.id,
+    coverages: [{ coverageCode: "CASCO", appliesToRiskKey: "NEG-2", attributes: {} }],
+  });
+  await service.rateTransaction({ transactionId: endorsement.id, requestId: randomUUID() });
+  await service.commitTransaction({ transactionId: endorsement.id, idempotencyKey: "commit-7-end" });
+
+  assert.equal(billingGateway.obligations.length, 2);
+  assert.equal(billingGateway.obligations[0]?.amount, "300.00");
+  assert.equal(billingGateway.obligations[1]?.amount, "-100.00");
 });

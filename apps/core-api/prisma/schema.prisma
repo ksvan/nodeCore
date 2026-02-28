@@ -101,6 +101,12 @@ enum PaymentStatus {
   ALLOCATED
 }
 
+enum BillingObligationStatus {
+  OPEN
+  INVOICED
+  CANCELLED
+}
+
 model User {
   id           String   @id @default(uuid()) @db.Uuid
   email        String   @unique
@@ -111,34 +117,34 @@ model User {
 }
 
 model Product {
-  id          String          @id @default(uuid()) @db.Uuid
-  productCode String          @unique
+  id          String           @id @default(uuid()) @db.Uuid
+  productCode String           @unique
   name        String
   description String?
-  status      ProductStatus   @default(DRAFT)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  status      ProductStatus    @default(DRAFT)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
   versions    ProductVersion[]
 }
 
 model ProductVersion {
-  id                      String                     @id @default(uuid()) @db.Uuid
-  productId               String                     @db.Uuid
+  id                      String                       @id @default(uuid()) @db.Uuid
+  productId               String                       @db.Uuid
   version                 Int
-  status                  ProductVersionStatus       @default(DRAFT)
+  status                  ProductVersionStatus         @default(DRAFT)
   effectiveFrom           DateTime
   effectiveTo             DateTime?
   policySchema            Json
   exposureSchemas         Json
   pricingInputSchema      Json
-  defaultCurrency         CurrencyCode               @default(SEK)
-  allowedCurrencies       CurrencyCode[]             @default([SEK])
-  pricingProgramVersionId String?                    @db.Uuid
+  defaultCurrency         CurrencyCode                 @default(SEK)
+  allowedCurrencies       CurrencyCode[]               @default([SEK])
+  pricingProgramVersionId String?                      @db.Uuid
   activatedAt             DateTime?
-  createdAt               DateTime                   @default(now())
-  updatedAt               DateTime                   @updatedAt
-  product                 Product                    @relation(fields: [productId], references: [id], onDelete: Restrict)
-  pricingProgramVersion   PricingProgramVersion?     @relation(fields: [pricingProgramVersionId], references: [id], onDelete: Restrict)
+  createdAt               DateTime                     @default(now())
+  updatedAt               DateTime                     @updatedAt
+  product                 Product                      @relation(fields: [productId], references: [id], onDelete: Restrict)
+  pricingProgramVersion   PricingProgramVersion?       @relation(fields: [pricingProgramVersionId], references: [id], onDelete: Restrict)
   snapshot                ProductVersionSnapshot?
   componentRefs           ProductVersionComponentRef[]
   pricingRuns             PricingRun[]
@@ -166,17 +172,17 @@ model Component {
 }
 
 model ComponentVersion {
-  id           String                     @id @default(uuid()) @db.Uuid
-  componentId  String                     @db.Uuid
-  version      Int
-  status       ComponentVersionStatus     @default(DRAFT)
-  schema       Json
-  metadata     Json
-  releasedAt   DateTime?
-  createdAt    DateTime                   @default(now())
-  updatedAt    DateTime                   @updatedAt
-  component    Component                  @relation(fields: [componentId], references: [id], onDelete: Restrict)
-  productRefs  ProductVersionComponentRef[]
+  id          String                       @id @default(uuid()) @db.Uuid
+  componentId String                       @db.Uuid
+  version     Int
+  status      ComponentVersionStatus       @default(DRAFT)
+  schema      Json
+  metadata    Json
+  releasedAt  DateTime?
+  createdAt   DateTime                     @default(now())
+  updatedAt   DateTime                     @updatedAt
+  component   Component                    @relation(fields: [componentId], references: [id], onDelete: Restrict)
+  productRefs ProductVersionComponentRef[]
 
   @@unique([componentId, version])
 }
@@ -204,20 +210,20 @@ model PricingProgram {
 }
 
 model PricingProgramVersion {
-  id              String                      @id @default(uuid()) @db.Uuid
-  pricingProgramId String                     @db.Uuid
-  version         Int
-  status          PricingProgramVersionStatus @default(DRAFT)
-  fileRef         String
-  inputSchema     Json
-  outputSchema    Json
-  metadata        Json
-  releasedAt      DateTime?
-  createdAt       DateTime                    @default(now())
-  updatedAt       DateTime                    @updatedAt
-  pricingProgram  PricingProgram              @relation(fields: [pricingProgramId], references: [id], onDelete: Restrict)
-  productVersions ProductVersion[]
-  pricingRuns     PricingRun[]
+  id               String                      @id @default(uuid()) @db.Uuid
+  pricingProgramId String                      @db.Uuid
+  version          Int
+  status           PricingProgramVersionStatus @default(DRAFT)
+  fileRef          String
+  inputSchema      Json
+  outputSchema     Json
+  metadata         Json
+  releasedAt       DateTime?
+  createdAt        DateTime                    @default(now())
+  updatedAt        DateTime                    @updatedAt
+  pricingProgram   PricingProgram              @relation(fields: [pricingProgramId], references: [id], onDelete: Restrict)
+  productVersions  ProductVersion[]
+  pricingRuns      PricingRun[]
 
   @@unique([pricingProgramId, version])
 }
@@ -247,13 +253,13 @@ model PricingRun {
 }
 
 model Policy {
-  id               String                @id @default(uuid()) @db.Uuid
-  policyNumber     String                @unique
-  status           PolicyStatus          @default(DRAFT)
-  productId        String                @db.Uuid
-  productVersionId String                @db.Uuid
-  createdAt        DateTime              @default(now()) @db.Timestamptz(6)
-  updatedAt        DateTime              @updatedAt @db.Timestamptz(6)
+  id               String                 @id @default(uuid()) @db.Uuid
+  policyNumber     String                 @unique
+  status           PolicyStatus           @default(DRAFT)
+  productId        String                 @db.Uuid
+  productVersionId String                 @db.Uuid
+  createdAt        DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime               @updatedAt @db.Timestamptz(6)
   terms            PolicyTerm[]
   transactions     PolicyTransaction[]
   risks            PolicyRisk[]
@@ -284,35 +290,35 @@ model PolicyTerm {
 }
 
 model PolicyTransaction {
-  id             String                  @id @default(uuid()) @db.Uuid
-  policyId       String                  @db.Uuid
-  termId         String                  @db.Uuid
-  type           PolicyTransactionType
-  status         PolicyTransactionStatus @default(DRAFT)
-  effectiveAt    DateTime                @db.Timestamptz(6)
-  requestId      String?
-  idempotencyKey String?
-  ratingRequestJson Json?
+  id                 String                  @id @default(uuid()) @db.Uuid
+  policyId           String                  @db.Uuid
+  termId             String                  @db.Uuid
+  type               PolicyTransactionType
+  status             PolicyTransactionStatus @default(DRAFT)
+  effectiveAt        DateTime                @db.Timestamptz(6)
+  requestId          String?
+  idempotencyKey     String?
+  ratingRequestJson  Json?
   ratingResponseJson Json?
-  ratedAt        DateTime?               @db.Timestamptz(6)
-  createdAt      DateTime                @default(now()) @db.Timestamptz(6)
-  committedAt    DateTime?               @db.Timestamptz(6)
-  policy         Policy                  @relation(fields: [policyId], references: [id], onDelete: Restrict)
-  term           PolicyTerm              @relation(fields: [termId], references: [id], onDelete: Restrict)
-  risks          PolicyRisk[]
-  coverages      PolicyCoverage[]
-  terms          CoverageTerm[]
-  premiums       PolicyPremium[]
-  pricingRuns    PricingRun[]
-  riskDrafts     PolicyRiskDraft[]
-  coverageDrafts PolicyCoverageDraft[]
-  termDrafts     CoverageTermDraft[]
+  ratedAt            DateTime?               @db.Timestamptz(6)
+  createdAt          DateTime                @default(now()) @db.Timestamptz(6)
+  committedAt        DateTime?               @db.Timestamptz(6)
+  policy             Policy                  @relation(fields: [policyId], references: [id], onDelete: Restrict)
+  term               PolicyTerm              @relation(fields: [termId], references: [id], onDelete: Restrict)
+  risks              PolicyRisk[]
+  coverages          PolicyCoverage[]
+  terms              CoverageTerm[]
+  premiums           PolicyPremium[]
+  pricingRuns        PricingRun[]
+  riskDrafts         PolicyRiskDraft[]
+  coverageDrafts     PolicyCoverageDraft[]
+  termDrafts         CoverageTermDraft[]
 
+  @@unique([policyId, idempotencyKey])
+  @@unique([policyId, requestId])
   @@index([policyId, createdAt])
   @@index([policyId, effectiveAt])
   @@index([termId, createdAt])
-  @@unique([policyId, idempotencyKey])
-  @@unique([policyId, requestId])
 }
 
 model PolicyRisk {
@@ -417,36 +423,36 @@ model PolicyRiskDraft {
 }
 
 model PolicyCoverageDraft {
-  id               String            @id @default(uuid()) @db.Uuid
-  policyId         String            @db.Uuid
-  transactionId    String            @db.Uuid
+  id               String              @id @default(uuid()) @db.Uuid
+  policyId         String              @db.Uuid
+  transactionId    String              @db.Uuid
   coverageCode     String
   appliesToRiskKey String?
   attributes       Json
-  createdAt        DateTime          @default(now()) @db.Timestamptz(6)
-  policy           Policy            @relation(fields: [policyId], references: [id], onDelete: Restrict)
-  transaction      PolicyTransaction @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  createdAt        DateTime            @default(now()) @db.Timestamptz(6)
+  policy           Policy              @relation(fields: [policyId], references: [id], onDelete: Restrict)
+  transaction      PolicyTransaction   @relation(fields: [transactionId], references: [id], onDelete: Restrict)
   terms            CoverageTermDraft[]
 
   @@index([transactionId, createdAt])
 }
 
 model CoverageTermDraft {
-  id               String                @id @default(uuid()) @db.Uuid
-  policyId         String                @db.Uuid
-  transactionId    String                @db.Uuid
-  policyCoverageDraftId String           @db.Uuid
-  termCode         String
-  valueType        CoverageTermValueType
-  moneyAmount      Decimal?              @db.Decimal(18, 2)
-  moneyCurrency    String?               @db.Char(3)
-  numberValue      Decimal?              @db.Decimal(18, 4)
-  stringValue      String?
-  booleanValue     Boolean?
-  createdAt        DateTime              @default(now()) @db.Timestamptz(6)
-  policy           Policy                @relation(fields: [policyId], references: [id], onDelete: Restrict)
-  transaction      PolicyTransaction     @relation(fields: [transactionId], references: [id], onDelete: Restrict)
-  policyCoverageDraft PolicyCoverageDraft @relation(fields: [policyCoverageDraftId], references: [id], onDelete: Restrict)
+  id                    String                @id @default(uuid()) @db.Uuid
+  policyId              String                @db.Uuid
+  transactionId         String                @db.Uuid
+  policyCoverageDraftId String                @db.Uuid
+  termCode              String
+  valueType             CoverageTermValueType
+  moneyAmount           Decimal?              @db.Decimal(18, 2)
+  moneyCurrency         String?               @db.Char(3)
+  numberValue           Decimal?              @db.Decimal(18, 4)
+  stringValue           String?
+  booleanValue          Boolean?
+  createdAt             DateTime              @default(now()) @db.Timestamptz(6)
+  policy                Policy                @relation(fields: [policyId], references: [id], onDelete: Restrict)
+  transaction           PolicyTransaction     @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  policyCoverageDraft   PolicyCoverageDraft   @relation(fields: [policyCoverageDraftId], references: [id], onDelete: Restrict)
 
   @@index([transactionId, createdAt])
 }
@@ -465,30 +471,50 @@ model PolicyIdempotencyKey {
 }
 
 model BillingAccount {
-  id        String               @id @default(uuid()) @db.Uuid
-  partyId   String               @db.Uuid
-  status    BillingAccountStatus @default(ACTIVE)
-  createdAt DateTime             @default(now())
-  updatedAt DateTime             @updatedAt
-  invoices  Invoice[]
-  payments  Payment[]
-  auditLogs BillingAuditLog[]
+  id          String               @id @default(uuid()) @db.Uuid
+  partyId     String               @db.Uuid
+  status      BillingAccountStatus @default(ACTIVE)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  invoices    Invoice[]
+  payments    Payment[]
+  obligations BillingObligation[]
+  auditLogs   BillingAuditLog[]
 
   @@index([partyId])
 }
 
+model BillingObligation {
+  id                  String                  @id @default(uuid()) @db.Uuid
+  policyId            String                  @db.Uuid
+  policyTransactionId String                  @unique @db.Uuid
+  termId              String                  @db.Uuid
+  billingAccountId    String?                 @db.Uuid
+  amount              Decimal                 @db.Decimal(18, 2)
+  currency            CurrencyCode
+  dueDate             DateTime                @db.Timestamptz(6)
+  status              BillingObligationStatus @default(OPEN)
+  createdAt           DateTime                @default(now()) @db.Timestamptz(6)
+  billingAccount      BillingAccount?         @relation(fields: [billingAccountId], references: [id], onDelete: Restrict)
+  invoiceLines        InvoiceLine[]
+
+  @@index([policyId, createdAt])
+  @@index([policyId, status, createdAt])
+  @@index([billingAccountId, createdAt])
+}
+
 model Invoice {
-  id               String          @id @default(uuid()) @db.Uuid
-  billingAccountId String          @db.Uuid
-  invoiceNumber    String          @unique
-  status           InvoiceStatus   @default(POSTED)
+  id               String              @id @default(uuid()) @db.Uuid
+  billingAccountId String              @db.Uuid
+  invoiceNumber    String              @unique
+  status           InvoiceStatus       @default(POSTED)
   currency         CurrencyCode
   dueDate          DateTime
-  totalAmount      Decimal         @db.Decimal(18, 2)
-  postedAt         DateTime        @default(now())
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  billingAccount   BillingAccount  @relation(fields: [billingAccountId], references: [id], onDelete: Restrict)
+  totalAmount      Decimal             @db.Decimal(18, 2)
+  postedAt         DateTime            @default(now())
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  billingAccount   BillingAccount      @relation(fields: [billingAccountId], references: [id], onDelete: Restrict)
   lines            InvoiceLine[]
   allocations      PaymentAllocation[]
 
@@ -496,28 +522,31 @@ model Invoice {
 }
 
 model InvoiceLine {
-  id          String   @id @default(uuid()) @db.Uuid
-  invoiceId   String   @db.Uuid
-  description String
-  quantity    Decimal  @db.Decimal(18, 4)
-  unitAmount  Decimal  @db.Decimal(18, 2)
-  lineTotal   Decimal  @db.Decimal(18, 2)
-  createdAt   DateTime @default(now())
-  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  id                  String             @id @default(uuid()) @db.Uuid
+  invoiceId           String             @db.Uuid
+  billingObligationId String?            @db.Uuid
+  description         String
+  quantity            Decimal            @db.Decimal(18, 4)
+  unitAmount          Decimal            @db.Decimal(18, 2)
+  lineTotal           Decimal            @db.Decimal(18, 2)
+  createdAt           DateTime           @default(now())
+  invoice             Invoice            @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  billingObligation   BillingObligation? @relation(fields: [billingObligationId], references: [id], onDelete: Restrict)
 
   @@index([invoiceId, createdAt])
+  @@index([billingObligationId, createdAt])
 }
 
 model Payment {
-  id               String             @id @default(uuid()) @db.Uuid
-  billingAccountId String             @db.Uuid
-  amount           Decimal            @db.Decimal(18, 2)
+  id               String              @id @default(uuid()) @db.Uuid
+  billingAccountId String              @db.Uuid
+  amount           Decimal             @db.Decimal(18, 2)
   currency         CurrencyCode
-  status           PaymentStatus      @default(RECEIVED)
+  status           PaymentStatus       @default(RECEIVED)
   providerRef      String?
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  billingAccount   BillingAccount     @relation(fields: [billingAccountId], references: [id], onDelete: Restrict)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  billingAccount   BillingAccount      @relation(fields: [billingAccountId], references: [id], onDelete: Restrict)
   allocations      PaymentAllocation[]
 
   @@index([billingAccountId, createdAt])
@@ -537,23 +566,23 @@ model PaymentAllocation {
 }
 
 model BillingIdempotencyKey {
-  id           String   @id @default(uuid()) @db.Uuid
-  commandScope String
+  id             String   @id @default(uuid()) @db.Uuid
+  commandScope   String
   idempotencyKey String
-  responseJson Json
-  createdAt    DateTime @default(now())
+  responseJson   Json
+  createdAt      DateTime @default(now())
 
   @@unique([commandScope, idempotencyKey])
 }
 
 model BillingAuditLog {
-  id               String   @id @default(uuid()) @db.Uuid
-  billingAccountId String?  @db.Uuid
+  id               String          @id @default(uuid()) @db.Uuid
+  billingAccountId String?         @db.Uuid
   entityType       String
-  entityId         String   @db.Uuid
+  entityId         String          @db.Uuid
   action           String
   data             Json
-  createdAt        DateTime @default(now())
+  createdAt        DateTime        @default(now())
   billingAccount   BillingAccount? @relation(fields: [billingAccountId], references: [id], onDelete: Restrict)
 
   @@index([billingAccountId, createdAt])

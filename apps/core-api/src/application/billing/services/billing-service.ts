@@ -569,4 +569,266 @@ export class BillingService {
 
     return dto;
   }
+
+  public async createPolicyObligation(input: {
+    policyId: string;
+    policyTransactionId: string;
+    termId: string;
+    amount: string;
+    currency: CurrencyCode;
+    dueDate: Date;
+    billingAccountId?: string | null;
+  }): Promise<{
+    id: string;
+    policyId: string;
+    policyTransactionId: string;
+    termId: string;
+    billingAccountId: string | null;
+    amount: string;
+    currency: CurrencyCode;
+    dueDate: string;
+    status: string;
+    createdAt: string;
+  }> {
+    const amountMinor = parseMoneyToMinorUnits(input.amount);
+    if (amountMinor === 0n) {
+      throw new BillingApplicationError("OBLIGATION_AMOUNT_INVALID", "Obligation amount must be non-zero", 400);
+    }
+    if (input.billingAccountId) {
+      const account = await this.repository.getBillingAccountById(input.billingAccountId);
+      if (!account) {
+        throw new BillingApplicationError("ACCOUNT_NOT_FOUND", "Billing account not found", 404);
+      }
+    }
+
+    const created = await this.repository.createBillingObligation({
+      policyId: input.policyId,
+      policyTransactionId: input.policyTransactionId,
+      termId: input.termId,
+      billingAccountId: input.billingAccountId ?? null,
+      amount: input.amount,
+      currency: input.currency,
+      dueDate: input.dueDate,
+    });
+
+    const dto = {
+      id: created.id,
+      policyId: created.policyId,
+      policyTransactionId: created.policyTransactionId,
+      termId: created.termId,
+      billingAccountId: created.billingAccountId,
+      amount: created.amount,
+      currency: created.currency,
+      dueDate: created.dueDate.toISOString(),
+      status: created.status,
+      createdAt: created.createdAt.toISOString(),
+    };
+
+    await this.repository.createAuditLog({
+      billingAccountId: created.billingAccountId,
+      entityType: "BillingObligation",
+      entityId: created.id,
+      action: "BillingObligationCreated",
+      data: dto as unknown as JsonObject,
+    });
+    await this.eventPublisher.publish({
+      eventType: "BillingObligationCreated",
+      entityType: "BillingObligation",
+      entityId: created.id,
+      data: eventData(dto),
+    });
+    await this.eventPublisher.publish({
+      eventType: "PolicyFinancialPositionChanged",
+      entityType: "Policy",
+      entityId: created.policyId,
+      data: eventData({
+        policyId: created.policyId,
+        policyTransactionId: created.policyTransactionId,
+        obligationId: created.id,
+        amount: created.amount,
+        currency: created.currency,
+        status: created.status,
+      }),
+    });
+
+    return dto;
+  }
+
+  public async generateInvoiceFromObligation(input: {
+    obligationId: string;
+    dueDate: Date;
+    billingAccountId?: string | null;
+    idempotencyKey: string;
+  }): Promise<{
+    obligationId: string;
+    policyId: string;
+    invoiceId: string;
+    invoiceNumber: string;
+    billingAccountId: string;
+    currency: CurrencyCode;
+    invoiceTotal: string;
+    dueDate: string;
+    status: string;
+  }> {
+    const scope = `POST /v1/billing/obligations/${input.obligationId}/invoice`;
+    const existing = await this.repository.getIdempotency(scope, input.idempotencyKey);
+    if (existing) {
+      return existing as unknown as ReturnType<BillingService["generateInvoiceFromObligation"]> extends Promise<
+        infer T
+      >
+        ? T
+        : never;
+    }
+
+    const obligation = await this.repository.getBillingObligationById(input.obligationId);
+    if (!obligation) {
+      throw new BillingApplicationError("OBLIGATION_NOT_FOUND", "Billing obligation not found", 404);
+    }
+    if (obligation.status !== "OPEN") {
+      throw new BillingApplicationError(
+        "OBLIGATION_NOT_OPEN",
+        "Only OPEN obligations can be invoiced",
+        409,
+      );
+    }
+
+    const accountId = input.billingAccountId ?? obligation.billingAccountId;
+    if (!accountId) {
+      throw new BillingApplicationError(
+        "BILLING_ACCOUNT_REQUIRED",
+        "billingAccountId is required for uninvoiced obligation",
+        400,
+      );
+    }
+    const account = await this.repository.getBillingAccountById(accountId);
+    if (!account) {
+      throw new BillingApplicationError("ACCOUNT_NOT_FOUND", "Billing account not found", 404);
+    }
+
+    const invoiceNumber = await this.repository.getNextInvoiceNumber();
+    const created = await this.repository.createInvoiceWithLines({
+      billingAccountId: accountId,
+      invoiceNumber,
+      currency: obligation.currency,
+      dueDate: input.dueDate,
+      totalAmount: obligation.amount,
+      lines: [
+        {
+          description: `Policy obligation ${obligation.id}`,
+          quantity: "1.00",
+          unitAmount: obligation.amount,
+          lineTotal: obligation.amount,
+          billingObligationId: obligation.id,
+        },
+      ],
+    });
+
+    await this.repository.updateBillingObligation({
+      obligationId: obligation.id,
+      status: "INVOICED",
+      billingAccountId: accountId,
+    });
+
+    const dto = {
+      obligationId: obligation.id,
+      policyId: obligation.policyId,
+      invoiceId: created.invoice.id,
+      invoiceNumber: created.invoice.invoiceNumber,
+      billingAccountId: created.invoice.billingAccountId,
+      currency: created.invoice.currency,
+      invoiceTotal: created.invoice.totalAmount,
+      dueDate: created.invoice.dueDate.toISOString(),
+      status: created.invoice.status,
+    };
+
+    await this.repository.saveIdempotency(scope, input.idempotencyKey, dto as unknown as JsonObject);
+    await this.repository.createAuditLog({
+      billingAccountId: accountId,
+      entityType: "Invoice",
+      entityId: created.invoice.id,
+      action: "InvoiceGeneratedFromPolicy",
+      data: dto as unknown as JsonObject,
+    });
+    await this.eventPublisher.publish({
+      eventType: "InvoiceGeneratedFromPolicy",
+      entityType: "Invoice",
+      entityId: created.invoice.id,
+      data: eventData(dto),
+    });
+    await this.eventPublisher.publish({
+      eventType: "PolicyFinancialPositionChanged",
+      entityType: "Policy",
+      entityId: obligation.policyId,
+      data: eventData({
+        policyId: obligation.policyId,
+        obligationId: obligation.id,
+        invoiceId: created.invoice.id,
+        status: "INVOICED",
+      }),
+    });
+
+    return dto;
+  }
+
+  public async getPolicyFinancialPosition(input: {
+    policyId: string;
+    asOf: Date;
+  }): Promise<{
+    policyId: string;
+    asOf: string;
+    outstandingObligations: ReadonlyArray<{
+      id: string;
+      policyTransactionId: string;
+      termId: string;
+      billingAccountId: string | null;
+      amount: string;
+      currency: CurrencyCode;
+      dueDate: string;
+      status: string;
+    }>;
+    linkedInvoices: ReadonlyArray<{
+      obligationId: string;
+      invoiceId: string;
+      invoiceNumber: string;
+      status: string;
+      invoiceTotal: string;
+      amountPaid: string;
+    }>;
+    paidAmount: string;
+  }> {
+    const obligations = await this.repository.listBillingObligationsByPolicy(input.policyId, input.asOf);
+    const outstandingObligations = obligations
+      .filter((obligation) => obligation.status === "OPEN")
+      .map((obligation) => ({
+        id: obligation.id,
+        policyTransactionId: obligation.policyTransactionId,
+        termId: obligation.termId,
+        billingAccountId: obligation.billingAccountId,
+        amount: obligation.amount,
+        currency: obligation.currency,
+        dueDate: obligation.dueDate.toISOString(),
+        status: obligation.status,
+      }));
+
+    const linkedInvoices = obligations.flatMap((obligation) =>
+      obligation.invoices.map((invoice) => ({
+        obligationId: obligation.id,
+        invoiceId: invoice.invoiceId,
+        invoiceNumber: invoice.invoiceNumber,
+        status: invoice.invoiceStatus,
+        invoiceTotal: invoice.invoiceTotal,
+        amountPaid: invoice.amountPaid,
+      })),
+    );
+
+    const paidAmount = sumMoneyStrings(linkedInvoices.map((invoice) => invoice.amountPaid));
+
+    return {
+      policyId: input.policyId,
+      asOf: input.asOf.toISOString(),
+      outstandingObligations,
+      linkedInvoices,
+      paidAmount,
+    };
+  }
 }

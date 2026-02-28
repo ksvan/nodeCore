@@ -2,7 +2,9 @@ import { z } from "zod";
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { PolicyApplicationError } from "../../../application/policy/services/errors.js";
 import { PolicyService, mapPolicyError } from "../../../application/policy/services/policy-service.js";
+import { BillingService } from "../../../application/billing/services/billing-service.js";
 import { PricingService } from "../../../application/pricing/services/pricing-service.js";
+import { PrismaBillingRepository } from "../../../infrastructure/billing/prisma-billing-repository.js";
 import { getPrismaClient } from "../../../infrastructure/persistence/prisma/client.js";
 import { PrismaPolicyRepository } from "../../../infrastructure/policy/prisma-policy-repository.js";
 import { PrismaPricingRepository } from "../../../infrastructure/pricing/prisma-pricing-repository.js";
@@ -47,6 +49,10 @@ export const registerPolicyRoutes = async (app: FastifyInstance): Promise<void> 
     new PythonPricingRunner(),
     new WsDomainEventPublisher(),
   );
+  const billingService = new BillingService(
+    new PrismaBillingRepository(getPrismaClient()),
+    new WsDomainEventPublisher(),
+  );
   const pricingGateway = {
     calculate: async (input: {
       requestId?: string;
@@ -68,7 +74,28 @@ export const registerPolicyRoutes = async (app: FastifyInstance): Promise<void> 
       };
     },
   };
-  const service = new PolicyService(repository, pricingGateway, new WsDomainEventPublisher());
+  const billingGateway = {
+    createObligationFromPremiumDelta: async (input: {
+      policyId: string;
+      policyTransactionId: string;
+      termId: string;
+      amount: string;
+      currency: "SEK" | "DKK" | "EUR" | "GBP" | "USD" | "NOK";
+      dueDate: Date;
+    }) => {
+      await billingService.createPolicyObligation({
+        ...input,
+      });
+    },
+    getFinancialPosition: async (input: { policyId: string; asOf: Date }) =>
+      billingService.getPolicyFinancialPosition(input),
+  };
+  const service = new PolicyService(
+    repository,
+    pricingGateway,
+    new WsDomainEventPublisher(),
+    billingGateway,
+  );
 
   app.post(
     "/v1/policies",
@@ -319,15 +346,14 @@ export const registerPolicyRoutes = async (app: FastifyInstance): Promise<void> 
       const params = z.object({ transactionId: z.string().uuid() }).parse(request.params);
       const body = z
         .object({
-          requestId: z.string().uuid().optional(),
+          requestId: z.string().uuid(),
           currency: z.enum(["SEK", "DKK", "EUR", "GBP", "USD", "NOK"]).optional(),
         })
-        .default({})
-        .parse(request.body ?? {});
+        .parse(request.body);
       try {
         const result = await service.rateTransaction({
           transactionId: params.transactionId,
-          ...(body.requestId ? { requestId: body.requestId } : {}),
+          requestId: body.requestId,
           ...(body.currency ? { currency: body.currency } : {}),
         });
         return reply.send(result);
@@ -374,13 +400,22 @@ export const registerPolicyRoutes = async (app: FastifyInstance): Promise<void> 
     { preHandler: app.authenticate },
     async (request, reply) => {
       const params = z.object({ policyId: z.string().uuid() }).parse(request.params);
-      const query = z.object({ asOf: z.string() }).parse(request.query);
+      const query = z
+        .object({
+          asOf: z.string(),
+          includeFinancials: z.coerce.boolean().optional(),
+        })
+        .parse(request.query);
       const asOf = new Date(query.asOf);
       if (Number.isNaN(asOf.getTime())) {
         return reply.code(400).send({ code: "INVALID_AS_OF", message: "Invalid asOf date" });
       }
       try {
-        const result = await service.getPolicySnapshot(params.policyId, asOf);
+        const result = await service.getPolicySnapshot(
+          params.policyId,
+          asOf,
+          query.includeFinancials ?? false,
+        );
         return reply.send(result);
       } catch (error: unknown) {
         sendError(reply, error);

@@ -25,6 +25,7 @@ export interface InvoiceRecord {
 export interface InvoiceLineRecord {
   id: string;
   invoiceId: string;
+  billingObligationId: string | null;
   description: string;
   quantity: string;
   unitAmount: string;
@@ -51,6 +52,19 @@ export interface PaymentAllocationRecord {
   createdAt: Date;
 }
 
+export interface BillingObligationRecord {
+  id: string;
+  policyId: string;
+  policyTransactionId: string;
+  termId: string;
+  billingAccountId: string | null;
+  amount: string;
+  currency: CurrencyCode;
+  dueDate: Date;
+  status: "OPEN" | "INVOICED" | "CANCELLED";
+  createdAt: Date;
+}
+
 export interface BillingRepository {
   createBillingAccount(input: { partyId: string }): Promise<BillingAccountRecord>;
   listBillingAccounts(query?: string): Promise<ReadonlyArray<BillingAccountRecord>>;
@@ -68,6 +82,7 @@ export interface BillingRepository {
       quantity: string;
       unitAmount: string;
       lineTotal: string;
+      billingObligationId?: string | null;
     }>;
   }): Promise<{ invoice: InvoiceRecord; lines: ReadonlyArray<InvoiceLineRecord> }>;
   listInvoicesByAccount(accountId: string): Promise<ReadonlyArray<InvoiceRecord>>;
@@ -92,6 +107,38 @@ export interface BillingRepository {
   }): Promise<PaymentAllocationRecord>;
   listPaymentAllocationsByPayment(paymentId: string): Promise<ReadonlyArray<PaymentAllocationRecord>>;
   listPaymentAllocationsByInvoice(invoiceId: string): Promise<ReadonlyArray<PaymentAllocationRecord>>;
+
+  createBillingObligation(input: {
+    policyId: string;
+    policyTransactionId: string;
+    termId: string;
+    billingAccountId: string | null;
+    amount: string;
+    currency: CurrencyCode;
+    dueDate: Date;
+  }): Promise<BillingObligationRecord>;
+  getBillingObligationById(obligationId: string): Promise<BillingObligationRecord | null>;
+  updateBillingObligation(input: {
+    obligationId: string;
+    status?: BillingObligationRecord["status"];
+    billingAccountId?: string | null;
+  }): Promise<BillingObligationRecord>;
+  listBillingObligationsByPolicy(
+    policyId: string,
+    asOf: Date,
+  ): Promise<
+    ReadonlyArray<
+      BillingObligationRecord & {
+        invoices: ReadonlyArray<{
+          invoiceId: string;
+          invoiceNumber: string;
+          invoiceStatus: InvoiceRecord["status"];
+          invoiceTotal: string;
+          amountPaid: string;
+        }>;
+      }
+    >
+  >;
 
   getIdempotency(scope: string, key: string): Promise<JsonObject | null>;
   saveIdempotency(scope: string, key: string, responseJson: JsonObject): Promise<void>;

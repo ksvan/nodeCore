@@ -163,6 +163,34 @@ export const registerBillingRoutes = async (app: FastifyInstance): Promise<void>
   );
 
   app.post(
+    "/v1/billing/obligations/:obligationId/invoice",
+    {
+      preHandler: app.authenticate,
+    },
+    async (request, reply) => {
+      const params = z.object({ obligationId: z.string().uuid() }).parse(request.params);
+      const body = z
+        .object({
+          dueDate: z.string().datetime(),
+          billingAccountId: z.string().uuid().nullable().optional(),
+        })
+        .parse(request.body);
+      try {
+        const idempotencyKey = requireIdempotencyKey(request.headers["idempotency-key"]);
+        const result = await service.generateInvoiceFromObligation({
+          obligationId: params.obligationId,
+          dueDate: new Date(body.dueDate),
+          billingAccountId: body.billingAccountId ?? null,
+          idempotencyKey,
+        });
+        return reply.code(201).send(result);
+      } catch (error: unknown) {
+        sendError(reply, error);
+      }
+    },
+  );
+
+  app.post(
     "/v1/billing/payments",
     {
       preHandler: app.authenticate,

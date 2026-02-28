@@ -1,5 +1,6 @@
 import type {
   BillingAccount,
+  BillingObligation,
   BillingIdempotencyKey,
   CurrencyCode,
   Invoice,
@@ -11,6 +12,7 @@ import type {
 import { Prisma } from "@prisma/client";
 import type {
   BillingAccountRecord,
+  BillingObligationRecord,
   BillingRepository,
   InvoiceLineRecord,
   InvoiceRecord,
@@ -46,6 +48,7 @@ const toInvoiceRecord = (row: Invoice): InvoiceRecord => ({
 const toInvoiceLineRecord = (row: InvoiceLine): InvoiceLineRecord => ({
   id: row.id,
   invoiceId: row.invoiceId,
+  billingObligationId: row.billingObligationId,
   description: row.description,
   quantity: row.quantity.toString(),
   unitAmount: row.unitAmount.toFixed(2),
@@ -69,6 +72,19 @@ const toPaymentAllocationRecord = (row: PaymentAllocation): PaymentAllocationRec
   paymentId: row.paymentId,
   invoiceId: row.invoiceId,
   amount: row.amount.toFixed(2),
+  createdAt: row.createdAt,
+});
+
+const toBillingObligationRecord = (row: BillingObligation): BillingObligationRecord => ({
+  id: row.id,
+  policyId: row.policyId,
+  policyTransactionId: row.policyTransactionId,
+  termId: row.termId,
+  billingAccountId: row.billingAccountId,
+  amount: row.amount.toFixed(2),
+  currency: row.currency as CurrencyCode,
+  dueDate: row.dueDate,
+  status: row.status,
   createdAt: row.createdAt,
 });
 
@@ -123,6 +139,7 @@ export class PrismaBillingRepository implements BillingRepository {
       quantity: string;
       unitAmount: string;
       lineTotal: string;
+      billingObligationId?: string | null;
     }>;
   }): Promise<{ invoice: InvoiceRecord; lines: ReadonlyArray<InvoiceLineRecord> }> {
     const created = await this.prisma.invoice.create({
@@ -139,6 +156,7 @@ export class PrismaBillingRepository implements BillingRepository {
             quantity: new Prisma.Decimal(line.quantity),
             unitAmount: new Prisma.Decimal(line.unitAmount),
             lineTotal: new Prisma.Decimal(line.lineTotal),
+            billingObligationId: line.billingObligationId ?? null,
           })),
         },
       },
@@ -251,6 +269,101 @@ export class PrismaBillingRepository implements BillingRepository {
       orderBy: { createdAt: "asc" },
     });
     return rows.map((row) => toPaymentAllocationRecord(row));
+  }
+
+  public async createBillingObligation(input: {
+    policyId: string;
+    policyTransactionId: string;
+    termId: string;
+    billingAccountId: string | null;
+    amount: string;
+    currency: CurrencyCode;
+    dueDate: Date;
+  }): Promise<BillingObligationRecord> {
+    const created = await this.prisma.billingObligation.create({
+      data: {
+        policyId: input.policyId,
+        policyTransactionId: input.policyTransactionId,
+        termId: input.termId,
+        billingAccountId: input.billingAccountId,
+        amount: new Prisma.Decimal(input.amount),
+        currency: input.currency,
+        dueDate: input.dueDate,
+      },
+    });
+    return toBillingObligationRecord(created);
+  }
+
+  public async getBillingObligationById(obligationId: string): Promise<BillingObligationRecord | null> {
+    const row = await this.prisma.billingObligation.findUnique({ where: { id: obligationId } });
+    return row ? toBillingObligationRecord(row) : null;
+  }
+
+  public async updateBillingObligation(input: {
+    obligationId: string;
+    status?: BillingObligationRecord["status"];
+    billingAccountId?: string | null;
+  }): Promise<BillingObligationRecord> {
+    const updated = await this.prisma.billingObligation.update({
+      where: { id: input.obligationId },
+      data: {
+        ...(input.status ? { status: input.status } : {}),
+        ...(Object.prototype.hasOwnProperty.call(input, "billingAccountId")
+          ? { billingAccountId: input.billingAccountId ?? null }
+          : {}),
+      },
+    });
+    return toBillingObligationRecord(updated);
+  }
+
+  public async listBillingObligationsByPolicy(
+    policyId: string,
+    asOf: Date,
+  ): Promise<
+    ReadonlyArray<
+      BillingObligationRecord & {
+        invoices: ReadonlyArray<{
+          invoiceId: string;
+          invoiceNumber: string;
+          invoiceStatus: InvoiceRecord["status"];
+          invoiceTotal: string;
+          amountPaid: string;
+        }>;
+      }
+    >
+  > {
+    const rows = await this.prisma.billingObligation.findMany({
+      where: { policyId, createdAt: { lte: asOf } },
+      include: {
+        invoiceLines: {
+          include: {
+            invoice: {
+              include: {
+                allocations: {
+                  where: { createdAt: { lte: asOf } },
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    return rows.map((row) => ({
+      ...toBillingObligationRecord(row),
+      invoices: row.invoiceLines
+        .filter((line) => line.invoice.createdAt <= asOf)
+        .map((line) => ({
+          invoiceId: line.invoice.id,
+          invoiceNumber: line.invoice.invoiceNumber,
+          invoiceStatus: line.invoice.status,
+          invoiceTotal: line.invoice.totalAmount.toFixed(2),
+          amountPaid: line.invoice.allocations
+            .reduce((sum, allocation) => sum.plus(allocation.amount), new Prisma.Decimal(0))
+            .toFixed(2),
+        })),
+    }));
   }
 
   public async getIdempotency(scope: string, key: string): Promise<JsonObject | null> {
