@@ -12,6 +12,10 @@
     "test": "node --test"
   },
   "dependencies": {
+    "@codemirror/lang-json": "^6.0.2",
+    "@codemirror/language": "^6.11.3",
+    "@codemirror/view": "^6.38.6",
+    "@uiw/react-codemirror": "^4.23.12",
     "next": "15.1.7",
     "react": "19.0.0",
     "react-dom": "19.0.0",

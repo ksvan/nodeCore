@@ -2,8 +2,13 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { JsonTextarea } from "@/components/json-textarea";
+import { JsonEditor } from "@/components/JsonEditor";
 import { StatusBadge } from "@/components/status-badge";
+import {
+  pricingInputSchemaTemplate,
+  pricingOutputSchemaTemplate,
+  snippetInsertRule,
+} from "@/lib/json-templates";
 import { productManagementApi } from "@/lib/api/product-management";
 import {
   ApiClientError,
@@ -96,9 +101,20 @@ export default function PricingProgramDetailPage() {
             <label>fileRef</label>
             <input value={fileRef} onChange={(event) => setFileRef(event.target.value)} required />
           </div>
-          <JsonTextarea label="Input Schema JSON" value={inputSchema} onChange={setInputSchema} />
-          <JsonTextarea label="Output Schema JSON" value={outputSchema} onChange={setOutputSchema} />
-          <JsonTextarea label="Metadata JSON" value={metadata} onChange={setMetadata} />
+          <JsonEditor
+            label="Input Schema JSON"
+            value={inputSchema}
+            onChange={setInputSchema}
+            templates={[pricingInputSchemaTemplate]}
+            snippets={[snippetInsertRule]}
+          />
+          <JsonEditor
+            label="Output Schema JSON"
+            value={outputSchema}
+            onChange={setOutputSchema}
+            templates={[pricingOutputSchemaTemplate]}
+          />
+          <JsonEditor label="Metadata JSON" value={metadata} onChange={setMetadata} />
           <button className="primary" type="submit">
             Create Version
           </button>

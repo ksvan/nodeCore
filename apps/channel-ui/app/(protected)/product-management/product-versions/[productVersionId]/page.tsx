@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { JsonTextarea } from "@/components/json-textarea";
+import { JsonEditor } from "@/components/JsonEditor";
 import { StatusBadge } from "@/components/status-badge";
 import { productManagementApi } from "@/lib/api/product-management";
 import {
@@ -140,7 +140,7 @@ export default function ProductVersionPage() {
               required
             />
           </div>
-          <JsonTextarea label="Config Overrides JSON" value={configOverrides} onChange={setConfigOverrides} />
+          <JsonEditor label="Config Overrides JSON" value={configOverrides} onChange={setConfigOverrides} />
           <button className="primary" type="submit" disabled={version?.status !== "DRAFT"}>
             Add Reference
           </button>
@@ -148,7 +148,13 @@ export default function ProductVersionPage() {
 
         <h3>Resolved Snapshot</h3>
         {version?.status === "ACTIVE" && snapshot ? (
-          <textarea readOnly rows={14} value={JSON.stringify(snapshot.resolvedSnapshot, null, 2)} />
+          <JsonEditor
+            label="Resolved Snapshot JSON"
+            value={JSON.stringify(snapshot.resolvedSnapshot, null, 2)}
+            onChange={() => undefined}
+            readOnly
+            height="320px"
+          />
         ) : (
           <p className="muted">Snapshot available after activation.</p>
         )}

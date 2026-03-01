@@ -12,6 +12,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 * Planned: MCP interface for package metadata and API exposure to agents.
 * Planned: Sidecar AI agent integration (LangGraph) with selectable LLM.
 
+## [0.4.2] - 2026-03-01
+
+### Added
+
+* Reusable CodeMirror-based JSON editor component for channel UI product-management flows:
+  - syntax highlighting
+  - bracket matching
+  - auto-indent support
+  - prettify and copy actions
+  - inline JSON parse error feedback with line/column.
+* JSON templates/snippets module for product-management editing:
+  - CoverageComponent / ExposureComponent / RuleComponent starter templates
+  - Pricing input/output schema templates
+  - quick snippets (term, deductible option, limit option, rule) with smart append to target arrays when present.
+
+### Changed
+
+* Product Management pages now use shared `JsonEditor` instead of duplicated raw JSON textarea logic:
+  - product version creation
+  - component version creation
+  - pricing program version creation
+  - product-version config overrides editing.
+
 ## [0.4.1] - 2026-02-28
 
 ### Added

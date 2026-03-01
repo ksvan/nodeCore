@@ -2,8 +2,14 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { JsonTextarea } from "@/components/json-textarea";
+import { JsonEditor } from "@/components/JsonEditor";
 import { StatusBadge } from "@/components/status-badge";
+import {
+  componentSnippets,
+  coverageComponentTemplate,
+  exposureComponentTemplate,
+  ruleComponentTemplate,
+} from "@/lib/json-templates";
 import { productManagementApi } from "@/lib/api/product-management";
 import { ApiClientError, type ComponentDto, type ComponentVersionDto } from "@/lib/api/types";
 
@@ -83,8 +89,22 @@ export default function ComponentDetailPage() {
               <option value="RETIRED">RETIRED</option>
             </select>
           </div>
-          <JsonTextarea label="Definition Schema JSON" value={schemaText} onChange={setSchemaText} />
-          <JsonTextarea label="Metadata JSON" value={metadataText} onChange={setMetadataText} />
+          <JsonEditor
+            label="Definition Schema JSON"
+            value={schemaText}
+            onChange={setSchemaText}
+            templates={
+              component?.type === "COVERAGE"
+                ? [coverageComponentTemplate]
+                : component?.type === "EXPOSURE"
+                  ? [exposureComponentTemplate]
+                  : component?.type === "RULE"
+                    ? [ruleComponentTemplate]
+                    : []
+            }
+            snippets={componentSnippets}
+          />
+          <JsonEditor label="Metadata JSON" value={metadataText} onChange={setMetadataText} />
           <button className="primary" type="submit">
             Create Version
           </button>

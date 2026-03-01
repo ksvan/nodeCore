@@ -3,8 +3,14 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { JsonTextarea } from "@/components/json-textarea";
+import { JsonEditor } from "@/components/JsonEditor";
 import { StatusBadge } from "@/components/status-badge";
+import {
+  componentSnippets,
+  pricingInputSchemaTemplate,
+  snippetInsertRule,
+  snippetInsertTerm,
+} from "@/lib/json-templates";
 import { productManagementApi } from "@/lib/api/product-management";
 import { ApiClientError, type ProductDto, type ProductVersionDto } from "@/lib/api/types";
 
@@ -108,12 +114,14 @@ export default function ProductDetailPage() {
               placeholder="uuid"
             />
           </div>
-          <JsonTextarea label="Policy Schema JSON" value={policySchema} onChange={setPolicySchema} />
-          <JsonTextarea label="Exposure Schemas JSON" value={exposureSchemas} onChange={setExposureSchemas} />
-          <JsonTextarea
+          <JsonEditor label="Policy Schema JSON" value={policySchema} onChange={setPolicySchema} />
+          <JsonEditor label="Exposure Schemas JSON" value={exposureSchemas} onChange={setExposureSchemas} />
+          <JsonEditor
             label="Pricing Input Schema JSON"
             value={pricingInputSchema}
             onChange={setPricingInputSchema}
+            templates={[pricingInputSchemaTemplate]}
+            snippets={[snippetInsertTerm, snippetInsertRule, ...componentSnippets]}
           />
           {createError ? <div className="error-box">{createError}</div> : null}
           <button className="primary" type="submit">
