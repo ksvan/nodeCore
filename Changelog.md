@@ -60,6 +60,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - New Business creation flow (policy + NB draft transaction).
   - Transaction workspace for draft risks, coverages, and coverage terms (replace semantics), plus validate/rate/commit actions.
   - Policy detail page with transaction list, as-of snapshot viewer, and endorsement draft creation.
+
 * UI-3 Billing Workspace in `apps/channel-ui`:
   - Billing account list/search + create account.
   - Billing account detail with invoice creation/posting, payment recording, payment allocation, and obligation-to-invoice action.
@@ -79,13 +80,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 * UI-1 channel app bootstrap at `apps/channel-ui` using Next.js App Router + TypeScript.
 * Login/logout UI with secure httpOnly cookie flow via Next route handlers (`/api/auth/login`, `/api/auth/logout`) and route protection middleware.
 * API-only channel architecture with core proxy route (`/api/core/[...path]`) that forwards JWT and correlation IDs to `core-api`.
+
 * Product Management UI module:
   - Products list/create and product detail with versions list/create.
   - Product version detail with status actions, component references, and snapshot visibility.
   - Component management pages (list/create, version list/create with JSON editing).
   - Pricing program pages (list/create, version list/create with `fileRef` and JSON schemas).
+
 * Optional dev WebSocket events panel in channel UI (`NEXT_PUBLIC_CORE_WS_URL`).
 * Core auth endpoint `POST /auth/login` for local JWT issuance from persisted users.
+
 * Additional Product Management read/query APIs used by channel UI:
   - product versions list/get
   - product version component refs list

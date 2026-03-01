@@ -29,7 +29,7 @@ Simple UI is added just to show the concept. Editing is directly in json text an
 
 Then you can see how the global search looks here
 
-![Search page](./docs/pictures/searcg.png)
+![Search page](./docs/pictures/search.png)
 
 And policies like this currently.
 
