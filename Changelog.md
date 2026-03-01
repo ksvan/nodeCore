@@ -34,6 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - component version creation
   - pricing program version creation
   - product-version config overrides editing.
+* Fixed billing account search query handling for UUID fields (`id`, `partyId`) to avoid Prisma runtime errors from text `contains` filters.
 
 ## [0.4.1] - 2026-02-28
 

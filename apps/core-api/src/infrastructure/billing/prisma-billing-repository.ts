@@ -88,6 +88,9 @@ const toBillingObligationRecord = (row: BillingObligation): BillingObligationRec
   createdAt: row.createdAt,
 });
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export class PrismaBillingRepository implements BillingRepository {
   public constructor(private readonly prisma: PrismaClient) {}
 
@@ -99,14 +102,18 @@ export class PrismaBillingRepository implements BillingRepository {
   }
 
   public async listBillingAccounts(query?: string): Promise<ReadonlyArray<BillingAccountRecord>> {
-    const where = query
-      ? {
-          OR: [
-            { id: { contains: query, mode: "insensitive" as const } },
-            { partyId: { contains: query, mode: "insensitive" as const } },
-          ],
-        }
-      : undefined;
+    const trimmedQuery = query?.trim() ?? "";
+    if (trimmedQuery.length > 0 && !UUID_PATTERN.test(trimmedQuery)) {
+      return [];
+    }
+
+    const where =
+      trimmedQuery.length > 0
+        ? {
+            OR: [{ id: trimmedQuery }, { partyId: trimmedQuery }],
+          }
+        : undefined;
+
     const rows = await this.prisma.billingAccount.findMany({
       ...(where ? { where } : {}),
       orderBy: { createdAt: "desc" },
