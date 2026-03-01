@@ -163,6 +163,9 @@ const mapCoverageTermDraft = (value: CoverageTermDraft): CoverageTermDraftRecord
 const coverageRef = (coverageCode: string, appliesToRiskKey: string | null): string =>
   `${coverageCode}::${appliesToRiskKey ?? ""}`;
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export class PrismaPolicyRepository implements PolicyRepository {
   public constructor(private readonly prisma: PrismaClient) {}
 
@@ -182,14 +185,16 @@ export class PrismaPolicyRepository implements PolicyRepository {
   }
 
   public async listPolicies(query?: string): Promise<ReadonlyArray<PolicyRecord>> {
-    const where = query
-      ? {
-          OR: [
-            { id: { contains: query, mode: "insensitive" as const } },
-            { policyNumber: { contains: query, mode: "insensitive" as const } },
-          ],
-        }
-      : undefined;
+    const trimmedQuery = query?.trim() ?? "";
+    const where =
+      trimmedQuery.length > 0
+        ? {
+            OR: [
+              ...(UUID_PATTERN.test(trimmedQuery) ? [{ id: trimmedQuery }] : []),
+              { policyNumber: { contains: trimmedQuery, mode: "insensitive" as const } },
+            ],
+          }
+        : undefined;
     const rows = await this.prisma.policy.findMany({
       ...(where ? { where } : {}),
       orderBy: { createdAt: "desc" },

@@ -132,6 +132,7 @@ invoice_idempotency_a="billing-invoice-a-${unique_suffix}"
 invoice_idempotency_b="billing-invoice-b-${unique_suffix}"
 payment_idempotency="billing-payment-${unique_suffix}"
 allocation_idempotency="billing-allocation-${unique_suffix}"
+obligation_invoice_idempotency="billing-obligation-invoice-${unique_suffix}"
 
 echo "Core API billing+invoicing manual check script"
 echo "Base URL: $BASE_URL"
@@ -227,6 +228,17 @@ call_api "GET" "/v1/billing/invoices/${invoice_id_a}" ""
 call_api "GET" "/v1/billing/invoices/${invoice_id_b}" ""
 call_api "GET" "/v1/billing/payments/${payment_id}" ""
 call_api "GET" "/v1/billing/accounts/${account_id}" ""
+
+if [[ -n "${BILLING_OBLIGATION_ID:-}" ]]; then
+  target_obligation_account="${BILLING_OBLIGATION_ACCOUNT_ID:-$account_id}"
+  call_api "POST" "/v1/billing/obligations/${BILLING_OBLIGATION_ID}/invoice" "$(cat <<JSON
+{
+  "dueDate": "${due_date}",
+  "billingAccountId": "${target_obligation_account}"
+}
+JSON
+)" "Idempotency-Key: ${obligation_invoice_idempotency}"
+fi
 
 echo ""
 echo "Billing and invoicing manual API check flow completed."

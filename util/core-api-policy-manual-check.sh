@@ -156,28 +156,36 @@ import json
 import sys
 
 request = json.loads(sys.stdin.read() or "{}")
-rating_input = request.get("ratingInput", {})
-exposures = rating_input.get("exposures", []) if isinstance(rating_input, dict) else []
-coverages = rating_input.get("coverages", []) if isinstance(rating_input, dict) else []
-currency = request.get("currency", "SEK")
+risks = request.get("risks") if isinstance(request.get("risks"), list) else []
+coverages = request.get("coverages") if isinstance(request.get("coverages"), list) else []
+currency = request.get("currency") or "SEK"
+request_id = request.get("requestId")
+result_version = request.get("pricingProgramVersionId") or "manual"
 
 base = 75.0
-base += 10.0 * len(exposures)
+base += 10.0 * len(risks)
 base += 5.0 * len(coverages)
 
 response = {
-  "requestId": request.get("requestId"),
-  "success": True,
-  "totalPremium": round(base, 2),
-  "currency": currency,
-  "breakdown": {
-    "base": 75.0,
-    "exposureCount": float(len(exposures)),
-    "coverageCount": float(len(coverages))
+  "schemaVersion": "v1",
+  "requestId": request_id,
+  "resultVersion": str(result_version),
+  "totals": {
+    "totalPremium": f"{round(base, 2):.2f}",
+    "currency": currency
   },
-  "details": {
-    "engine": "policy-manual-check-script"
-  }
+  "breakdown": [
+    {
+      "coverageCode": "TOTAL",
+      "riskKey": None,
+      "amount": f"{round(base, 2):.2f}",
+      "currency": currency,
+      "details": {
+        "engine": "policy-manual-check-script"
+      }
+    }
+  ],
+  "errors": []
 }
 
 sys.stdout.write(json.dumps(response))
@@ -251,7 +259,8 @@ call_api "POST" "/v1/product-management/pricing-programs/${pricing_program_id}/v
   },
   "metadata": {
     "source": "policy-manual-check"
-  }
+  },
+  "status": "ACTIVE"
 }
 JSON
 )"
@@ -372,6 +381,13 @@ JSON
 )"
 
 call_api "POST" "/v1/policy-transactions/${new_business_tx_id}/validate" ""
+call_api "POST" "/v1/policy-transactions/${new_business_tx_id}/rate" "$(cat <<JSON
+{
+  "requestId": "$(uuid)",
+  "currency": "SEK"
+}
+JSON
+)"
 call_api "POST" "/v1/policy-transactions/${new_business_tx_id}/commit" "{}" "Idempotency-Key: ${new_business_commit_idempotency}"
 
 call_api "GET" "/v1/policies/${policy_id}/snapshot?asOf=${snapshot_as_of_initial}" ""
@@ -456,9 +472,17 @@ JSON
 )"
 
 call_api "POST" "/v1/policy-transactions/${endorsement_tx_id}/validate" ""
+call_api "POST" "/v1/policy-transactions/${endorsement_tx_id}/rate" "$(cat <<JSON
+{
+  "requestId": "$(uuid)",
+  "currency": "SEK"
+}
+JSON
+)"
 call_api "POST" "/v1/policy-transactions/${endorsement_tx_id}/commit" "{}" "Idempotency-Key: ${endorsement_commit_idempotency}"
 
 call_api "GET" "/v1/policies/${policy_id}/snapshot?asOf=${snapshot_as_of_endorsement}" ""
+call_api "GET" "/v1/policies/${policy_id}/snapshot?asOf=${snapshot_as_of_endorsement}&includeFinancials=true" ""
 
 echo ""
 echo "Policy-domain manual API check flow completed."
