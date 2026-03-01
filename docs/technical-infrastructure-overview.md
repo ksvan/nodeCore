@@ -51,6 +51,9 @@ Typical commands (from `apps/core-api`):
 - Pricing is executed by Python programs through stdin/stdout JSON contracts.
 - Product versions point to pricing program versions (`fileRef`).
 - Pricing runs are persisted for auditability (request/response and metadata).
+- Event streaming:
+  - `/ws/events` for full event feed
+  - `/ws/business-events` for curated business event feed with subscribe filters (`eventTypes`, `entityTypes`, `entityIds`, `sinceOccurredAt`)
 
 ## Demo startup (frontend + backend)
 
@@ -69,6 +72,7 @@ Current `channel-ui` scope:
 
 - Login/logout + protected routing (cookie/JWT proxy pattern).
 - Product Management UI (products, components, pricing programs).
+- Product Management JSON editing uses a shared CodeMirror editor with templates/snippets.
 - Policy UI (list/search, new business creation, transaction workspace, endorsement flow, as-of snapshots).
 - Billing UI (accounts, invoices, payments, allocations, and policy-financial links).
 - Ops UI (global search, events stream, business-events stream, and placeholders for audit/integration tools).

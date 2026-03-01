@@ -48,6 +48,7 @@ This part is to make products and manage and make the re-usable componenents acr
   * Rule Components
   * Pricing Programs
   * Validation & Simulation
+  * JSON editor with templates/snippets for fast schema authoring (implemented in channel UI)
 
 
 ---
@@ -256,3 +257,12 @@ To supplement and guide the design of above needs.
 * **Event Replay / Reprocess** (only if supported)
 
 ---
+
+## Current implementation notes (0.4.x)
+
+* Channel UI currently implements:
+  * Product Management workspace
+  * Policy workspace
+  * Billing workspace
+  * Ops workspace (global search + events/business-events viewers)
+* Audit viewer and integration-failure tooling are present as UI shells and require backend endpoints to become fully functional.
